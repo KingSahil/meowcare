@@ -1,6 +1,7 @@
 import { cors } from '@elysiajs/cors';
 import { openapi } from '@elysiajs/openapi';
 import { Elysia } from 'elysia';
+import { aiRoutes } from './routes/ai';
 import { burnoutRoutes } from './routes/burnout';
 import { reminderRoutes } from './routes/reminder';
 import { sosRoutes } from './routes/sos';
@@ -33,6 +34,7 @@ const app = new Elysia()
         },
         tags: [
           { name: 'Health', description: 'Basic service health and runtime mode' },
+          { name: 'AI', description: 'OCR and reminder parsing endpoints backed by ai-module' },
           { name: 'Reminders', description: 'Reminder creation and listing' },
           { name: 'Status', description: 'Medicine dose status updates' },
           { name: 'Alerts', description: 'SOS and alert-triggering endpoints' },
@@ -61,6 +63,7 @@ const app = new Elysia()
       }
     }
   )
+  .use(aiRoutes)
   .use(reminderRoutes)
   .use(statusRoutes)
   .use(sosRoutes)

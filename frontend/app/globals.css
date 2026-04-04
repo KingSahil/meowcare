@@ -4,17 +4,17 @@
 
 :root {
   --font-sans: "Manrope", "Segoe UI", sans-serif;
-  --background: #f5f3ee;
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface-strong: #ffffff;
-  --surface-muted: #ece7de;
-  --border: rgba(32, 28, 22, 0.1);
-  --border-strong: rgba(32, 28, 22, 0.16);
-  --text: #171411;
-  --muted: #6f685f;
-  --accent: #1f6b57;
-  --accent-strong: #174f41;
-  --danger: #8a3831;
+  --background: #0e1513;
+  --surface: rgba(22, 29, 27, 0.86);
+  --surface-strong: #1d2522;
+  --surface-muted: #141b19;
+  --border: rgba(154, 179, 168, 0.16);
+  --border-strong: rgba(154, 179, 168, 0.26);
+  --text: #dde4e0;
+  --muted: #97a79f;
+  --accent: #68dbae;
+  --accent-strong: #2fa67f;
+  --danger: #d76b64;
 }
 
 * {
@@ -29,8 +29,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(31, 107, 87, 0.08), transparent 26%),
-    linear-gradient(180deg, #faf8f3 0%, var(--background) 100%);
+    radial-gradient(circle at top left, rgba(104, 219, 174, 0.1), transparent 34%),
+    radial-gradient(circle at 85% 12%, rgba(47, 95, 80, 0.18), transparent 30%),
+    linear-gradient(180deg, #0f1715 0%, var(--background) 100%);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 13px;
@@ -44,7 +45,7 @@ select {
 }
 
 :focus-visible {
-  outline: 3px solid rgba(31, 107, 87, 0.18);
+  outline: 3px solid rgba(104, 219, 174, 0.28);
   outline-offset: 2px;
 }
 
@@ -52,7 +53,7 @@ select {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 18px 44px rgba(28, 22, 15, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(10px);
 }
 
@@ -61,7 +62,7 @@ select {
   width: 100%;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(20, 27, 25, 0.96);
   padding: 10px 12px;
   color: var(--text);
 }
@@ -73,8 +74,8 @@ select {
 .button-primary {
   min-height: 44px;
   border-radius: 8px;
-  background: var(--text);
-  color: #f7f4ef;
+  background: linear-gradient(135deg, #68dbae 0%, #4bb88f 100%);
+  color: #082419;
   padding: 10px 16px;
   font-weight: 700;
   transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease;
@@ -82,7 +83,7 @@ select {
 
 .button-primary:hover {
   transform: translateY(-1px);
-  background: #26211b;
+  background: linear-gradient(135deg, #72e7b7 0%, #56c49a 100%);
 }
 
 .button-secondary {
@@ -114,5 +115,5 @@ select {
 }
 
 .vital-glow {
-  box-shadow: 0 0 0 1px rgba(31, 107, 87, 0.08), 0 18px 44px rgba(28, 22, 15, 0.08);
+  box-shadow: 0 0 0 1px rgba(104, 219, 174, 0.14), 0 18px 44px rgba(0, 0, 0, 0.32);
 }

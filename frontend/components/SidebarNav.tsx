@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
-import { AlertTriangle, Bell, LayoutDashboard, Pill, Settings } from 'lucide-react';
+import { AlertTriangle, Bell, Boxes, LayoutDashboard, Pill, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const items: Array<{ label: string; href: Route; icon: typeof LayoutDashboard }> = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Logs', href: '/dashboard/logs', icon: Bell },
   { label: 'Refills', href: '/dashboard/refills', icon: Pill },
+  { label: 'Stock', href: '/dashboard/stock', icon: Boxes },
   { label: 'Alerts', href: '/dashboard/alerts', icon: AlertTriangle },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings }
 ];
