@@ -6,19 +6,14 @@ import {
   Bell, 
   MessageSquare,
   Settings, 
-  LifeBuoy, 
-  HelpCircle,
   AlertTriangle,
   Activity,
-  User,
   ShieldCheck,
   Wifi,
-  Search,
-  Menu,
-  X
+  Menu
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useCare } from '../context/CareContext';
 
@@ -131,48 +126,62 @@ export function Sidebar() {
 
 export function Topbar() {
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState('https://cdn.pixabay.com/photo/2017/05/23/17/12/doctor-2337835_1280.jpg');
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY <= 24) {
+        setIsHidden(false);
+      } else {
+        setIsHidden(currentScrollY > lastScrollY);
+      }
+
+      lastScrollY = currentScrollY;
+    };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header className={cn(
-      "fixed top-0 w-full z-50 transition-all duration-500 px-6 py-4 flex justify-between items-center",
-      scrolled 
-        ? "bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-black/20 py-3 border-b border-white/10" 
-        : "bg-slate-900/80 backdrop-blur-xl border-b border-white/10"
-    )}>
-      <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-12 transition-transform">
-            <ShieldCheck className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-xl font-black text-on-surface tracking-tighter uppercase hidden md:block">
-            healthcare
-          </span>
-        </Link>
-
-        <div className="hidden md:flex items-center relative group">
-          <Search className="absolute left-4 w-4 h-4 text-secondary group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search patient records, meds, or alerts..."
-            className="pl-12 pr-6 py-2.5 bg-white/10 text-white placeholder:text-slate-300 border border-white/10 rounded-2xl text-xs font-bold w-80 focus:ring-2 focus:ring-primary focus:bg-white/15 transition-all"
-          />
+    <header
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 px-3 pt-3 transition-all duration-500 md:px-6",
+        isHidden ? "pointer-events-none -translate-y-24 opacity-0" : "translate-y-0 opacity-100"
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto flex items-center justify-between border text-white transition-all duration-500",
+          "max-w-4xl rounded-[24px] border-white/14 bg-slate-950/42 px-4 py-2.5 shadow-xl shadow-slate-950/15 backdrop-blur-xl md:px-5"
+        )}
+      >
+        <div className="flex items-center gap-3 md:gap-5">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-cyan-400 shadow-lg shadow-cyan-950/30 transition-transform group-hover:rotate-6">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <div className="hidden md:block">
+              <span className="block text-base font-black tracking-[0.12em] uppercase text-white">
+                healthcare
+              </span>
+              <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-white/60">
+                Remote Companion
+              </span>
+            </div>
+          </Link>
         </div>
-      </div>
-      
-      <div className="flex items-center gap-4 text-white">
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 text-white">
           <Link
             to="/whatsapp"
             title="Open WhatsApp link"
-            className="hidden md:inline-flex items-center gap-2 rounded-2xl bg-[#25D366]/15 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-[#25D366]/25"
+            className="hidden md:inline-flex items-center gap-2 rounded-2xl border border-[#25D366]/20 bg-[#25D366]/14 px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:bg-[#25D366]/22"
           >
             <MessageSquare className="w-4 h-4 text-[#25D366]" />
             WhatsApp
@@ -180,27 +189,30 @@ export function Topbar() {
           <button
             onClick={() => navigate('/logs')}
             title="Open health analytics"
-            className="p-3 hover:bg-white/10 rounded-xl transition-all relative group"
+            className="relative rounded-2xl border border-white/8 bg-white/6 p-2.5 transition-all hover:-translate-y-0.5 hover:bg-white/12 group"
           >
-            <Activity className="w-5 h-5 group-hover:text-primary transition-colors" />
-            <span className="absolute top-3 right-3 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
+            <Activity className="w-4.5 h-4.5 group-hover:text-primary transition-colors" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-primary"></span>
           </button>
           <button
             onClick={() => navigate('/alerts')}
             title="Open alerts"
-            className="p-3 hover:bg-white/10 rounded-xl transition-all relative group"
+            className="relative rounded-2xl border border-white/8 bg-white/6 p-2.5 transition-all hover:-translate-y-0.5 hover:bg-white/12 group"
           >
-            <Bell className="w-5 h-5 group-hover:text-primary transition-colors" />
-            <span className="absolute top-3 right-3 w-2 h-2 bg-tertiary rounded-full border-2 border-white animate-ping"></span>
-            <span className="absolute top-3 right-3 w-2 h-2 bg-tertiary rounded-full border-2 border-white"></span>
+            <Bell className="w-4.5 h-4.5 group-hover:text-primary transition-colors" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-tertiary animate-ping"></span>
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-tertiary"></span>
           </button>
-          <div className="h-8 w-[1px] bg-white/20 mx-2"></div>
-          <Link to="/settings" className="flex items-center gap-3 pl-2 group">
+          <div className="mx-1 hidden h-7 w-px bg-white/14 sm:block"></div>
+          <Link
+            to="/settings"
+            className="flex items-center gap-2 rounded-2xl border border-white/8 bg-white/6 px-2 py-1.5 transition-all hover:bg-white/10 group"
+          >
             <div className="text-right hidden sm:block">
               <p className="text-[10px] font-black uppercase tracking-widest text-white">Dr. Rhen</p>
               <p className="text-[9px] font-bold text-slate-300 uppercase">Senior Admin</p>
             </div>
-            <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white/70 shadow-md group-hover:scale-105 transition-transform bg-slate-700">
+            <div className="h-9 w-9 rounded-xl overflow-hidden border-2 border-white/70 bg-slate-700 shadow-md transition-transform group-hover:scale-105">
               <img 
                 src={avatarSrc}
                 alt="User"
@@ -208,10 +220,10 @@ export function Topbar() {
               />
             </div>
           </Link>
+          <button className="lg:hidden rounded-2xl border border-white/10 bg-white/8 p-2.5 shadow-md">
+            <Menu className="w-5 h-5 text-white" />
+          </button>
         </div>
-        <button className="lg:hidden p-3 bg-surface-container-lowest rounded-xl shadow-md">
-          <Menu className="w-6 h-6 text-on-surface" />
-        </button>
       </div>
     </header>
   );
