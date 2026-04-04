@@ -66,8 +66,4 @@ export function listReminders(userId) {
   return requestJson(`/api/reminder/list?${query.toString()}`);
 }
 
-export function listReminders(userId) {
-  return getJson('/api/reminder/list', { userId });
-}
-
 export { API_BASE_URL };
