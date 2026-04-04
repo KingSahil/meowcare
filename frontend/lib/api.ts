@@ -2,7 +2,7 @@ import { DEMO_SCAN_RESULT } from '@/lib/demo-data';
 import { loadDemoSnapshot, saveDemoSnapshot } from '@/lib/storage';
 import type { AlertItem, BurnoutPoint, Medicine, ParsedAiInsight, Patient, ScanResult } from '@/lib/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 const getJson = async <T>(input: RequestInfo, init?: RequestInit): Promise<T> => {
   const response = await fetch(input, init);

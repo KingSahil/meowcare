@@ -9,8 +9,8 @@ import { voiceRoutes } from './routes/voice';
 import { getDataMode, getRuntimeNote } from './db/supabase';
 import { initializeSocketServer } from './socket/socket';
 
-const port = Number(Bun.env.PORT ?? 3000);
-const socketPort = Number(Bun.env.SOCKET_PORT ?? 3001);
+const port = Number(Bun.env.PORT ?? 4000);
+const socketPort = Number(Bun.env.SOCKET_PORT ?? 4001);
 
 initializeSocketServer(socketPort);
 

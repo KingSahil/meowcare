@@ -3,7 +3,7 @@
 import { io, Socket } from 'socket.io-client';
 import type { AlertItem } from '@/lib/types';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'ws://localhost:4000';
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'ws://localhost:4001';
 
 export const connectCareSocket = (
   onAlert: (alert: AlertItem) => void,
