@@ -123,7 +123,18 @@ function parseDurationDetails(text) {
       text: '',
       value: null,
       unit: '',
-      days: null
+      days: null,
+      open_ended: false
+    };
+  }
+
+  if (/(ongoing|lifelong|no end|until further notice|indefinite|continuous)/i.test(value)) {
+    return {
+      text: 'ongoing',
+      value: null,
+      unit: '',
+      days: null,
+      open_ended: true
     };
   }
 
@@ -160,7 +171,8 @@ function parseDurationDetails(text) {
       text: `${amount} ${unit}`,
       value: amount,
       unit,
-      days
+      days,
+      open_ended: false
     };
   }
 
@@ -168,7 +180,8 @@ function parseDurationDetails(text) {
     text: '',
     value: null,
     unit: '',
-    days: null
+    days: null,
+    open_ended: false
   };
 }
 
@@ -346,10 +359,16 @@ function pickDosageText(item, combinedText) {
   const sourceMatch = combinedText.match(
     /\b\d+(?:\.\d+)?\s*(?:tablet|tablets|tab|capsule|capsules|cap|caps|ml|drops?|puffs?)\b/i
   );
+  const countMatch = combinedText.match(/\b(?:take|give)?\s*(\d+)\s*(?:tablet|tablets|tab|capsule|capsules|cap|caps|drops?)\b/i);
   const sourceDose = normalizeText(sourceMatch?.[0] || '');
+  const countDose = countMatch ? `${countMatch[1]} ${countMatch[0].replace(/.*\d+\s*/, '')}`.trim() : '';
 
   if (sourceDose && (!existing || /[+()]/.test(existing) || !/(tablet|tab|capsule|cap|ml|drop|puff)/i.test(existing))) {
     return sourceDose;
+  }
+
+  if (countDose && !existing) {
+    return countDose;
   }
 
   if (existing) {
@@ -1005,7 +1024,7 @@ function buildClarifications(items) {
         item_index: index,
         field: 'duration_text',
         medicine: item.medicine,
-        question: `How long should reminders be set for ${item.medicine}? Example: 5 days`
+        question: `How long should reminders be set for ${item.medicine}? Example: 5 days or ongoing`
       });
     }
 
@@ -1212,7 +1231,8 @@ function buildSimpleOutput(medicines, reminders, questions) {
 
     entry.schedule.push({
       time: reminder.time || reminder.first_dose_at || '',
-      relation: mapRelationForOutput(reminder)
+      relation: mapRelationForOutput(reminder),
+      dose: formatDose(reminder, entry)
     });
     entry.start_date = reminder.start_date || entry.start_date;
     entry.end_date = reminder.end_date || entry.end_date;
@@ -1242,10 +1262,27 @@ function buildSimpleOutput(medicines, reminders, questions) {
     }
   }
 
-  return {
-    medications: [...grouped.values()],
-    clarifications_needed: (questions || []).map((question) => question.question)
-  };
+    return {
+      medications: [...grouped.values()],
+      clarifications_needed: (questions || []).map((question) => question.question)
+    };
+}
+
+function formatDose(reminder, entry) {
+  const dosage = normalizeText(reminder?.dosage || entry?.dosage);
+  const doseCount = reminder?.dose_count;
+  if (doseCount && dosage) {
+    const unit = dosage.replace(/^\d+(?:\.\d+)?\s*/, '');
+    if (/(tablet|tab|capsule|cap|drops?|puffs?)/i.test(unit || dosage)) {
+      return `${doseCount} ${unit || dosage}`.trim();
+    }
+  }
+
+  if (doseCount) {
+    return String(doseCount);
+  }
+
+  return dosage;
 }
 
 function compilePrescriptionData(items, options = {}) {

@@ -4,7 +4,8 @@ const readline = require('node:readline/promises');
 const { stdin, stdout } = require('node:process');
 const {
   applyClarificationAnswers,
-  extractMedicinesAndReminders
+  extractMedicinesAndReminders,
+  compilePrescriptionData
 } = require('./ocr');
 
 const PREFERENCES_PATH = path.join(__dirname, 'user-preferences.json');
@@ -64,12 +65,15 @@ function isManualTimeList(value) {
 function isScheduleAnswer(value) {
   const text = normalizeText(value);
 
-      return (
+  if (!text || text.includes(',')) {
+    return false;
+  }
+
+  return (
     /^\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?$/.test(text) ||
     /^(once daily|twice daily|thrice daily|three times daily|four times daily|every \d+ hours?|morning|afternoon|evening|night|bedtime)$/i.test(
       text
     ) ||
-    isManualTimeList(text) ||
     isClockTime(text) ||
     isSpecificTimePhrase(text)
   );
@@ -114,12 +118,13 @@ function validateAnswer(question, answer) {
         ? { valid: true, normalized: value }
         : {
             valid: false,
-            message: 'Use something like 1-0-1, twice daily, after dinner, or 21:00.'
+            message: 'Pick one option only (no commas). Example: 1-0-1 OR twice daily OR after dinner OR 21:00.'
           };
     case 'duration_text':
-      return /\b\d+\s*(day|days|week|weeks|month|months)\b/i.test(value)
+      return /\b\d+\s*(day|days|week|weeks|month|months)\b/i.test(value) ||
+        /(ongoing|lifelong|no end|until further notice|indefinite|continuous)/i.test(value)
         ? { valid: true, normalized: value }
-        : { valid: false, message: 'Use a duration like 5 days or 2 weeks.' };
+        : { valid: false, message: 'Use a duration like 5 days, 2 weeks, or ongoing.' };
     default:
       return { valid: true, normalized: value };
   }
@@ -218,6 +223,82 @@ function collectPreferenceUpdates(result) {
   return updates;
 }
 
+function toRawItems(medicines = []) {
+  return medicines.map((item) => ({
+    medicine: item.medicine || item.medicine_name || item.name || '',
+    dosage: item.dosage || '',
+    frequency: item.frequency || '',
+    timing: item.timing || '',
+    duration_text: item.duration_text || '',
+    schedule_pattern: item.schedule_pattern || '',
+    condition: item.condition || '',
+    instructions: item.instructions || item.special_instructions || '',
+    source_text: item.source_text || '',
+    manual_time_labels: item.manual_time_labels || [],
+    schedule_confirmed: Boolean(item.schedule_confirmed),
+    schedule_ambiguous: Boolean(item.schedule_ambiguous),
+    conflicts: Array.isArray(item.conflicts) ? item.conflicts : []
+  }));
+}
+
+async function manageManualEdits(result) {
+  if (!stdin.isTTY) {
+    return result;
+  }
+
+  const rl = readline.createInterface({ input: stdin, output: stdout });
+  let currentResult = result;
+  let rawItems = toRawItems(result.medicines || []);
+
+  try {
+    const addAnswer = normalizeText(await rl.question('Add a medicine manually? (y/n)\n> ')).toLowerCase();
+
+    if (addAnswer === 'y' || addAnswer === 'yes') {
+      const name = normalizeText(await rl.question('Medicine name:\n> '));
+      const dosage = normalizeText(await rl.question('Dosage (e.g., 1 tablet, 500 mg). Optional:\n> '));
+      const schedule = normalizeText(
+        await rl.question('Schedule (e.g., 1-0-1, twice daily, after dinner, 21:00):\n> ')
+      );
+      const duration = normalizeText(await rl.question('Duration (e.g., 5 days, 2 weeks, ongoing):\n> '));
+      const instructions = normalizeText(await rl.question('Special instructions (optional):\n> '));
+
+      if (name) {
+        rawItems.push({
+          medicine: name,
+          dosage,
+          frequency: schedule,
+          timing: schedule,
+          duration_text: duration,
+          schedule_pattern: '',
+          condition: '',
+          instructions,
+          source_text: ''
+        });
+        currentResult = compilePrescriptionData(rawItems, { userContext: currentResult.user_context });
+      }
+    }
+
+    const removeAnswer = normalizeText(await rl.question('Remove a medicine? (y/n)\n> ')).toLowerCase();
+    if ((removeAnswer === 'y' || removeAnswer === 'yes') && rawItems.length) {
+      console.log('Current medicines:');
+      rawItems.forEach((item, index) => {
+        console.log(`${index + 1}. ${item.medicine}`);
+      });
+
+      const selection = normalizeText(await rl.question('Enter the number to remove:\n> '));
+      const index = Number(selection) - 1;
+      if (Number.isInteger(index) && rawItems[index]) {
+        rawItems.splice(index, 1);
+        currentResult = compilePrescriptionData(rawItems, { userContext: currentResult.user_context });
+      }
+    }
+
+    return currentResult;
+  } finally {
+    await rl.close();
+  }
+}
+
 async function askQuestionsUntilSettled(result) {
   if (!stdin.isTTY) {
     return result;
@@ -269,19 +350,52 @@ async function askQuestionsUntilSettled(result) {
 }
 
 async function main() {
-  const imagePath = process.argv[2];
-
-  if (!imagePath) {
-    console.error('Usage: node demo.js <image-path>');
-    process.exit(1);
-  }
+  const imagePathArg = process.argv[2];
+  let imagePath = imagePathArg || '';
+  let manualOnly = false;
 
   const preferences = await loadPreferences();
-  const result = await extractMedicinesAndReminders(imagePath, {
-    debug: true,
-    userContext: buildUserContext(preferences)
-  });
-  const finalized = await askQuestionsUntilSettled(result);
+  if (!imagePath && stdin.isTTY) {
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    try {
+      const answer = normalizeText(await rl.question('Use a prescription image? (y/n)\n> ')).toLowerCase();
+      if (answer === 'y' || answer === 'yes') {
+        imagePath = normalizeText(await rl.question('Image path:\n> '));
+      } else {
+        manualOnly = true;
+      }
+    } finally {
+      await rl.close();
+    }
+  }
+
+  const result = imagePath
+    ? await extractMedicinesAndReminders(imagePath, {
+        debug: true,
+        userContext: buildUserContext(preferences)
+      })
+    : compilePrescriptionData([], { userContext: buildUserContext(preferences) });
+
+  let edited = result;
+  if (stdin.isTTY) {
+    if (manualOnly) {
+      edited = await manageManualEdits(result);
+    } else {
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+      try {
+        const answer = normalizeText(
+          await rl.question('Manually add or remove medicines before clarifications? (y/n)\n> ')
+        ).toLowerCase();
+        if (answer === 'y' || answer === 'yes') {
+          edited = await manageManualEdits(result);
+        }
+      } finally {
+        await rl.close();
+      }
+    }
+  }
+
+  const finalized = await askQuestionsUntilSettled(edited);
 
   await savePreferences({
     ...preferences,
@@ -313,7 +427,10 @@ async function main() {
     },
     medications: finalized.medications || [],
     clarifications_needed: finalized.clarifications_needed || [],
-    schedule_preview: finalized.reminders || [],
+    schedule_preview: (finalized.reminders || []).map((reminder) => ({
+      ...reminder,
+      dose: reminder.dose_count || reminder.dosage || ''
+    })),
     error: finalized.error || ''
   }, null, 2));
 }
