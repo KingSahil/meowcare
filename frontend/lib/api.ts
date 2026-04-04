@@ -225,8 +225,10 @@ export const getWhatsappHealth = async () => {
   return data as {
     ok: boolean;
     connected?: boolean;
+    connectionState?: string;
     qrAvailable?: boolean;
     qrUpdatedAt?: string | null;
+    lastConnectedAt?: string | null;
   };
 };
 

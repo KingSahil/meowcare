@@ -1,4 +1,5 @@
 import React from 'react';
+import { Phone } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export type MedicationStatus = 'MISSED' | 'TAKEN' | 'PENDING';
@@ -19,6 +20,8 @@ type MedicineTableProps = {
   onAddMedicine: () => void;
   onEditMedicine: (medication: Medication) => void;
   onRefillNow: (medication: Medication) => void;
+  onCallReminder?: (medication: Medication) => void;
+  callingMedicationId?: string | number | null;
   onStatusChange?: (medication: Medication, status: MedicationStatus | 'LATER') => void;
 };
 
@@ -27,6 +30,8 @@ export default function MedicineTable({
   onAddMedicine,
   onEditMedicine,
   onRefillNow,
+  onCallReminder,
+  callingMedicationId,
   onStatusChange
 }: MedicineTableProps) {
   return (
@@ -112,6 +117,16 @@ export default function MedicineTable({
                       >
                         Edit
                       </button>
+                      {onCallReminder && (
+                        <button
+                          onClick={() => onCallReminder(med)}
+                          disabled={callingMedicationId === med.id}
+                          className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-sky-500 text-white hover:opacity-90 disabled:opacity-60 inline-flex items-center gap-1"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          {callingMedicationId === med.id ? 'Calling...' : 'Call'}
+                        </button>
+                      )}
                       {lowStock && (
                         <button
                           onClick={() => onRefillNow(med)}

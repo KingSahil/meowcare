@@ -4,6 +4,7 @@ import {
   History, 
   Pill, 
   Bell, 
+  MessageSquare,
   Settings, 
   LifeBuoy, 
   HelpCircle,
@@ -152,7 +153,7 @@ export function Topbar() {
             <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-black text-on-surface tracking-tighter uppercase hidden md:block">
-            healtcare
+            healthcare
           </span>
         </Link>
 
@@ -168,6 +169,14 @@ export function Topbar() {
       
       <div className="flex items-center gap-4 text-white">
         <div className="flex items-center gap-2">
+          <Link
+            to="/whatsapp"
+            title="Open WhatsApp link"
+            className="hidden md:inline-flex items-center gap-2 rounded-2xl bg-[#25D366]/15 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-[#25D366]/25"
+          >
+            <MessageSquare className="w-4 h-4 text-[#25D366]" />
+            WhatsApp
+          </Link>
           <button
             onClick={() => navigate('/logs')}
             title="Open health analytics"

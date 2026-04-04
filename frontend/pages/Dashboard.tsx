@@ -1,12 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   Download,
   Frown,
   Heart,
   Laugh,
+  Link2,
   Meh,
+  MessageSquare,
   Plus,
+  RefreshCw,
   Send,
   Smile,
   Sparkles,
@@ -26,7 +29,7 @@ import {
 } from 'recharts';
 import MedicineTable, { type Medication, type MedicationStatus } from '../components/MedicineTable';
 import { useCare, type PatientProfile, type VitalsSnapshot } from '../context/CareContext';
-import { parseReminderText, scanPrescription, voiceQuery } from '../lib/api';
+import { getWhatsappHealth, getWhatsappQrUrl, parseReminderText, scanPrescription, triggerCallReminderNow, voiceQuery } from '../lib/api';
 import { generatePDF } from '../lib/pdfGenerator';
 import { cn } from '../lib/utils';
 
@@ -38,6 +41,15 @@ type ParsedPrescriptionItem = {
   schedule: string;
   durationDays: number;
   notes?: string;
+};
+
+type WhatsappStatus = {
+  ok: boolean;
+  connected?: boolean;
+  connectionState?: string;
+  qrAvailable?: boolean;
+  qrUpdatedAt?: string | null;
+  lastConnectedAt?: string | null;
 };
 
 const moodOptions = [
@@ -86,7 +98,7 @@ function ModalFrame({
   onSave: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-slate-950/20 backdrop-blur-md p-4 flex items-center justify-center">
       <div className="w-full max-w-2xl rounded-3xl bg-surface-container-lowest p-6 shadow-2xl">
         <h3 className="text-2xl font-black mb-4">{title}</h3>
         {children}
@@ -97,6 +109,160 @@ function ModalFrame({
           <button onClick={onSave} className="px-4 py-2 rounded-xl bg-primary text-white font-black text-xs uppercase">
             Save
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppConnectModal({
+  status,
+  error,
+  loading,
+  qrKey,
+  onClose,
+  onRefresh
+}: {
+  status: WhatsappStatus | null;
+  error: string | null;
+  loading: boolean;
+  qrKey: number;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const showQr = Boolean(status?.qrAvailable && !status?.connected);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950/20 backdrop-blur-md p-4 flex items-center justify-center">
+      <div className="w-full max-w-4xl rounded-[32px] border border-white/60 bg-surface-container-lowest shadow-2xl overflow-hidden">
+        <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="p-7 md:p-8 bg-gradient-to-br from-[#f4fffa] via-surface-container-lowest to-[#e8f6ff]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#25D366]/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-[#075E54]">
+              <MessageSquare className="w-4 h-4" />
+              WhatsApp Link
+            </div>
+            <h3 className="mt-5 text-3xl font-black tracking-tight">Scan and link WhatsApp</h3>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-secondary">
+              Open WhatsApp on the caregiver phone, tap <span className="font-black text-on-surface">Linked devices</span>, and scan this QR code to connect the reminder bot.
+            </p>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  label: 'Connection',
+                  value: status?.connected ? 'Connected' : showQr ? 'Ready to scan' : 'Starting',
+                  tone: status?.connected ? 'text-emerald-700' : 'text-[#075E54]'
+                },
+                {
+                  label: 'QR updated',
+                  value: status?.qrUpdatedAt ? new Date(status.qrUpdatedAt).toLocaleTimeString() : 'Waiting',
+                  tone: 'text-on-surface'
+                },
+                {
+                  label: 'Last linked',
+                  value: status?.lastConnectedAt ? new Date(status.lastConnectedAt).toLocaleString() : 'Not yet',
+                  tone: 'text-on-surface'
+                }
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary">{item.label}</p>
+                  <p className={cn('mt-3 text-sm font-black', item.tone)}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-3xl bg-white/70 border border-white/60 p-5 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-secondary">How to scan</p>
+              <div className="mt-4 space-y-3 text-sm text-secondary">
+                <p>1. Open WhatsApp on the phone that should receive reminders.</p>
+                <p>2. Go to Settings or the three-dot menu, then choose <span className="font-black text-on-surface">Linked devices</span>.</p>
+                <p>3. Tap <span className="font-black text-on-surface">Link a device</span> and point the camera at this QR.</p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {error}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-[#075E54] p-7 md:p-8 text-white flex flex-col">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/70">Bot status</p>
+                <h4 className="mt-3 text-2xl font-black">
+                  {status?.connected ? 'Linked and ready' : showQr ? 'Scan this QR code' : 'Preparing QR code'}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-2xl bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-8 flex-1 rounded-[32px] bg-white p-6 text-center text-on-surface shadow-2xl flex flex-col items-center justify-center">
+              {showQr ? (
+                <>
+                  <img
+                    key={qrKey}
+                    src={`${getWhatsappQrUrl()}?t=${qrKey}`}
+                    alt="WhatsApp QR code"
+                    className="h-64 w-64 rounded-3xl bg-white object-contain shadow-sm"
+                  />
+                  <p className="mt-5 text-base font-black text-[#075E54]">Scan from WhatsApp to connect</p>
+                  <p className="mt-2 text-sm text-secondary">The code refreshes automatically while this dialog is open.</p>
+                </>
+              ) : (
+                <>
+                  <div className={cn(
+                    'flex h-64 w-64 items-center justify-center rounded-3xl border-2 border-dashed',
+                    status?.connected ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+                  )}>
+                    <div className="space-y-4 text-center">
+                      <div className={cn(
+                        'mx-auto flex h-16 w-16 items-center justify-center rounded-2xl',
+                        status?.connected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      )}>
+                        <Link2 className="h-8 w-8" />
+                      </div>
+                      <p className="px-6 text-sm font-black text-on-surface">
+                        {status?.connected ? 'WhatsApp is already linked.' : loading ? 'Fetching the latest QR...' : 'Waiting for the bot to expose a fresh QR.'}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-sm text-secondary">
+                    {status?.connected
+                      ? 'You can close this dialog. Scheduled reminders and reply actions are available now.'
+                      : 'If the QR does not appear yet, keep the bot running and refresh once.'}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-[#075E54] shadow-sm transition hover:-translate-y-0.5"
+              >
+                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+                Refresh QR
+              </button>
+              <a
+                href={getWhatsappQrUrl()}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+              >
+                <Link2 className="w-4 h-4" />
+                Open image
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -116,6 +282,7 @@ export default function Dashboard() {
     setMedicationStatus,
     addImportedMedications,
     dismissAlert,
+    pushAlert,
     runBurnoutCheck
   } = useCare();
   const [aiQuery, setAiQuery] = useState('');
@@ -130,6 +297,16 @@ export default function Dashboard() {
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
   const [isMedicationModalOpen, setIsMedicationModalOpen] = useState(false);
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppStatus, setWhatsAppStatus] = useState<WhatsappStatus | null>(null);
+  const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
+  const [isWhatsAppLoading, setIsWhatsAppLoading] = useState(false);
+  const [whatsAppQrKey, setWhatsAppQrKey] = useState(Date.now());
+  const [callingMedicationId, setCallingMedicationId] = useState<string | number | null>(null);
+  const [callReminderFeedback, setCallReminderFeedback] = useState<{
+    tone: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [editingMedicationId, setEditingMedicationId] = useState<string | number | null>(null);
   const [patientDraft, setPatientDraft] = useState<PatientProfile>(patient);
   const [vitalsDraft, setVitalsDraft] = useState<VitalsSnapshot>(vitals);
@@ -158,6 +335,38 @@ export default function Dashboard() {
   );
 
   const chartData = useMemo(() => chartDataForVitals(vitals.heartRate), [vitals.heartRate]);
+
+  const refreshWhatsAppStatus = async () => {
+    setIsWhatsAppLoading(true);
+    setWhatsAppError(null);
+
+    try {
+      const nextStatus = await getWhatsappHealth();
+      setWhatsAppStatus(nextStatus);
+      setWhatsAppQrKey(Date.now());
+    } catch (error) {
+      setWhatsAppError(error instanceof Error ? error.message : 'Unable to reach WhatsApp bot.');
+    } finally {
+      setIsWhatsAppLoading(false);
+    }
+  };
+
+  const openWhatsAppModal = () => {
+    setIsWhatsAppModalOpen(true);
+    void refreshWhatsAppStatus();
+  };
+
+  useEffect(() => {
+    if (!isWhatsAppModalOpen) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshWhatsAppStatus();
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [isWhatsAppModalOpen]);
 
   const handleAiSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -304,6 +513,43 @@ export default function Dashboard() {
     });
   };
 
+  const handleTriggerCallReminder = async (medication: Medication) => {
+    setCallingMedicationId(medication.id);
+    setCallReminderFeedback(null);
+
+    try {
+      await triggerCallReminderNow({
+        userId: patient.userId,
+        phone: patient.phone,
+        medicine: medication.name,
+        dosage: medication.dose,
+        customScript: `Hello. This is a medicine reminder for ${patient.name}. It is time to take ${medication.name}${medication.dose ? `, ${medication.dose}` : ''}. After the beep, say taken, later, or skip.`
+      });
+
+      const successMessage = `Deepgram call reminder started for ${medication.name}.`;
+      setCallReminderFeedback({
+        tone: 'success',
+        text: successMessage
+      });
+      pushAlert({
+        id: crypto.randomUUID(),
+        title: 'Voice reminder started',
+        desc: `${medication.name} call reminder was triggered for ${patient.phone}.`,
+        type: 'system',
+        severity: 'INFO',
+        time: 'just now',
+        location: 'Deepgram Call Flow'
+      });
+    } catch (error) {
+      setCallReminderFeedback({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Unable to start Deepgram call reminder.'
+      });
+    } finally {
+      setCallingMedicationId(null);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-20">
       <div className="grid grid-cols-12 gap-6">
@@ -320,6 +566,10 @@ export default function Dashboard() {
                 <div className="flex flex-wrap gap-3">
                   <button onClick={() => { setPatientDraft(patient); setIsPatientModalOpen(true); }} className="px-4 py-2 rounded-xl bg-surface-container-low border border-surface-container-high text-xs font-black uppercase tracking-widest">Edit Patient</button>
                   <button onClick={() => { setVitalsDraft(vitals); setIsVitalsModalOpen(true); }} className="px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-black uppercase tracking-widest">Update Vitals</button>
+                  <button onClick={openWhatsAppModal} className="px-4 py-2 rounded-xl bg-[#25D366]/10 text-[#075E54] text-xs font-black uppercase tracking-widest flex items-center gap-2 border border-[#25D366]/20">
+                    <MessageSquare className="w-4 h-4" />
+                    Link WhatsApp
+                  </button>
                   <button onClick={handleDownloadDoctorReport} className="px-4 py-2 rounded-xl bg-on-surface text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
                     <Download className="w-4 h-4" />
                     Doctor PDF
@@ -377,11 +627,25 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-8">
+            {callReminderFeedback && (
+              <div
+                className={cn(
+                  'mb-4 rounded-2xl border px-4 py-3 text-sm font-medium',
+                  callReminderFeedback.tone === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                )}
+              >
+                {callReminderFeedback.text}
+              </div>
+            )}
             <MedicineTable
               medications={medications}
               onAddMedicine={openAddMedication}
               onEditMedicine={openEditMedication}
               onRefillNow={(medication) => void setMedicationStatus(medication, 'LATER', `Refill requested for ${medication.name}.`)}
+              onCallReminder={(medication) => void handleTriggerCallReminder(medication)}
+              callingMedicationId={callingMedicationId}
               onStatusChange={(medication, status) => void setMedicationStatus(medication, status)}
             />
           </div>
@@ -540,6 +804,17 @@ export default function Dashboard() {
             <textarea className="rounded-2xl bg-surface-container-low px-4 py-3 min-h-24 md:col-span-2" value={medicationDraft.notes ?? ''} onChange={(event) => setMedicationDraft((current) => ({ ...current, notes: event.target.value }))} placeholder="Notes" />
           </div>
         </ModalFrame>
+      )}
+
+      {isWhatsAppModalOpen && (
+        <WhatsAppConnectModal
+          status={whatsAppStatus}
+          error={whatsAppError}
+          loading={isWhatsAppLoading}
+          qrKey={whatsAppQrKey}
+          onClose={() => setIsWhatsAppModalOpen(false)}
+          onRefresh={() => void refreshWhatsAppStatus()}
+        />
       )}
 
       <button onClick={openAddMedication} className="fixed bottom-8 right-8 w-16 h-16 rounded-3xl bg-primary text-white shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">

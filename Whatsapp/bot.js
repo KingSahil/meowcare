@@ -158,10 +158,13 @@ async function startBot() {
       connectionState = connection;
     }
 
-    if (qr && !hasDisplayedQRForCurrentAttempt) {
-      hasDisplayedQRForCurrentAttempt = true;
+    if (qr) {
       latestQrPayload = qr;
       qrUpdatedAt = new Date().toISOString();
+    }
+
+    if (qr && !hasDisplayedQRForCurrentAttempt) {
+      hasDisplayedQRForCurrentAttempt = true;
       renderQrCode(qr);
     }
 
