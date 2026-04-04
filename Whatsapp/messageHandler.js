@@ -1,7 +1,11 @@
-import { queryMedicineInfo, triggerSos, updateStatus } from './api.js';
+import { listReminders, queryMedicineInfo, triggerSos, updateStatus } from './api.js';
 
 const MEDICINE_QUERY_PATTERN =
   /\b(medicine|medicines|medication|medications|meds|dose|dosage|schedule|routine|timing|next|when|what time|what's next|should i take|take)\b/i;
+const REMINDER_LIST_PATTERN =
+  /\b(my medicines|my medication|my meds|today meds|today medicines|medicine list|show medicines|show meds|what medicines do i have|what meds do i have)\b/i;
+const HELP_PATTERN =
+  /\b(help|menu|options|commands|what can you do|what can i say|how does this work|can you help me|please help|show help)\b/i;
 
 function normalizeText(message) {
   return message?.trim().toLowerCase() ?? '';
@@ -139,6 +143,42 @@ function isMedicineQueryText(text) {
   return Boolean(text && MEDICINE_QUERY_PATTERN.test(text));
 }
 
+function isReminderListText(text) {
+  return Boolean(text && REMINDER_LIST_PATTERN.test(text));
+}
+
+function isHelpText(text) {
+  return Boolean(text && HELP_PATTERN.test(text));
+}
+
+function inferIntentFromText(text) {
+  const normalized = normalizeText(text);
+
+  if (!normalized) {
+    return '';
+  }
+
+  if (isHelpText(normalized)) {
+    return 'help';
+  }
+
+  if (
+    isReminderListText(normalized) ||
+    (normalized.includes('show') && (normalized.includes('medicine') || normalized.includes('meds'))) ||
+    (normalized.includes('list') && (normalized.includes('medicine') || normalized.includes('meds'))) ||
+    (normalized.includes('today') && (normalized.includes('medicine') || normalized.includes('meds'))) ||
+    (normalized.includes('schedule') && (normalized.includes('my') || normalized.includes('medicine')))
+  ) {
+    return 'reminder_list';
+  }
+
+  if (isMedicineQueryText(normalized)) {
+    return 'medicine_query';
+  }
+
+  return '';
+}
+
 function buildContext(jid, text, state) {
   return {
     jid,
@@ -149,15 +189,37 @@ function buildContext(jid, text, state) {
   };
 }
 
-function buildReminderPayload(state) {
+function formatReminderList(reminders) {
+  if (!Array.isArray(reminders) || reminders.length === 0) {
+    return '\ud83d\udc8a No medicines are currently saved for you in the database yet.';
+  }
+
+  const lines = reminders.map((reminder, index) => {
+    const medicine = reminder?.medicine || 'Medicine';
+    const dosage = reminder?.dosage || 'Dose not set';
+    const time = reminder?.time || 'Time not set';
+    const quantity = reminder?.quantity ? ` x${reminder.quantity}` : '';
+
+    return `${index + 1}. ${medicine} - ${dosage}${quantity} at ${time}`;
+  });
+
+  return ['\ud83d\udc8a Your saved medicines:', ...lines].join('\n');
+}
+
+function buildHelpText() {
   return [
-    {
-      medicine: state.medicine,
-      dosage: state.dosage,
-      time: state.timeLabel ?? state.cron,
-      quantity: 1
-    }
-  ];
+    '\ud83e\udde1 I can help with your medicines here.',
+    '',
+    'Try sending:',
+    '\u2022 `taken` - mark your dose as taken',
+    '\u2022 `later` - remind me again soon',
+    '\u2022 `skip` - mark this dose as skipped',
+    '\u2022 `sos` - send an emergency alert',
+    '\u2022 `my medicines` - show your saved medicine list',
+    '\u2022 `what medicines do i have?` - ask in a normal sentence',
+    '',
+    'You can also say things like `show my medicine schedule` or `can you help me`.'
+  ].join('\n');
 }
 
 function isConnectionRefusedError(error) {
@@ -183,8 +245,7 @@ async function sendReply(sock, jid, text) {
 async function handleMedicineQuery({ sock, context, rawText }) {
   const response = await queryMedicineInfo({
     userId: context.userId,
-    query: rawText,
-    reminders: buildReminderPayload(context.state)
+    query: rawText
   });
 
   const replyText =
@@ -194,6 +255,16 @@ async function handleMedicineQuery({ sock, context, rawText }) {
     "I couldn't understand that medicine question.";
 
   await sendReply(sock, context.jid, replyText);
+}
+
+async function handleReminderList({ sock, context }) {
+  const response = await listReminders(context.userId);
+  const reminders = response?.data ?? [];
+  await sendReply(sock, context.jid, formatReminderList(reminders));
+}
+
+async function handleHelp({ sock, context }) {
+  await sendReply(sock, context.jid, buildHelpText());
 }
 
 async function handleTaken({ sock, context, state, markUserReplied }) {
@@ -279,10 +350,11 @@ export async function handleIncomingMessage({
 
   const rawText = extractText(baileysMessage);
   const text = extractCommand(rawText);
+  const inferredIntent = inferIntentFromText(rawText);
   const context = buildContext(jid, text, state);
 
   console.log(
-    `[handler] Received message from ${jid}. remoteJid=${remoteJid || 'none'} Raw text: "${rawText}" Command: "${text || 'none'}"`
+    `[handler] Received message from ${jid}. remoteJid=${remoteJid || 'none'} Raw text: "${rawText}" Command: "${text || 'none'}" Intent: "${inferredIntent || 'none'}"`
   );
 
   try {
@@ -306,7 +378,17 @@ export async function handleIncomingMessage({
       return;
     }
 
-    if (isMedicineQueryText(rawText)) {
+    if (inferredIntent === 'help') {
+      await handleHelp({ sock, context });
+      return;
+    }
+
+    if (inferredIntent === 'reminder_list') {
+      await handleReminderList({ sock, context });
+      return;
+    }
+
+    if (inferredIntent === 'medicine_query') {
       await handleMedicineQuery({ sock, context, rawText });
       return;
     }
@@ -326,7 +408,10 @@ export async function handleIncomingMessage({
     await sendReply(
       sock,
       jid,
-      '\ud83d\udcac Please reply with: taken / later / skip / sos'
+      '\ud83d\udcac Please reply with: taken / later / skip / sos\nOr send `help` to see more options.'
     );
+    return;
   }
+
+  await sendReply(sock, jid, '\ud83e\udde1 I did not understand that yet. Send `help` and I will show what I can do.');
 }
