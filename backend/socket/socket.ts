@@ -2,8 +2,33 @@ import { Server as SocketIOServer } from 'socket.io';
 import type { Alert, LogEntry } from '../types';
 
 let io: SocketIOServer | null = null;
+let shutdownHooksRegistered = false;
+
+const closeSocketServer = () => {
+  if (!io) {
+    return;
+  }
+
+  io.close();
+  io = null;
+};
+
+const registerShutdownHooks = () => {
+  if (shutdownHooksRegistered) {
+    return;
+  }
+
+  shutdownHooksRegistered = true;
+
+  // Ensure watch-mode restarts release the socket port before the next boot.
+  process.on('SIGINT', closeSocketServer);
+  process.on('SIGTERM', closeSocketServer);
+  process.on('beforeExit', closeSocketServer);
+};
 
 export const initializeSocketServer = (port = Number(Bun.env.SOCKET_PORT ?? 3001)) => {
+  registerShutdownHooks();
+
   if (io) {
     return io;
   }

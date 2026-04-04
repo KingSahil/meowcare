@@ -71,8 +71,8 @@ bun run typecheck
 Example `.env`:
 
 ```env
-PORT=3000
-SOCKET_PORT=3001
+PORT=4000
+SOCKET_PORT=4001
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-supabase-anon-key
 ```

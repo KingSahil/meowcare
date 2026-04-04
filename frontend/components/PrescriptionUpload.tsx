@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileUp, ScanSearch } from 'lucide-react';
 import { scanPrescription } from '@/lib/api';
 import type { ScanResult } from '@/lib/types';
@@ -13,14 +13,30 @@ interface PrescriptionUploadProps {
 export function PrescriptionUpload({ result, onScanned }: PrescriptionUploadProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleFile = (file?: File) => {
     if (!file) {
       return;
     }
 
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
+    setSelectedFile(file);
+    setPreviewType(file.type === 'application/pdf' ? 'pdf' : 'image');
     setPreview(URL.createObjectURL(file));
   };
 
@@ -50,13 +66,13 @@ export function PrescriptionUpload({ result, onScanned }: PrescriptionUploadProp
       >
         <FileUp className="h-8 w-8 text-brand" aria-hidden="true" />
         <span className="text-label font-medium text-ink">Drag and drop or browse prescription</span>
-        <span className="text-body text-muted">Supports image previews for demo-ready upload states.</span>
+        <span className="text-body text-muted">Supports image and PDF previews for demo-ready upload states.</span>
       </button>
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf,.pdf"
         className="sr-only"
         onChange={(event) => {
           handleFile(event.target.files?.[0]);
@@ -65,16 +81,33 @@ export function PrescriptionUpload({ result, onScanned }: PrescriptionUploadProp
 
       {preview ? (
         <div className="mt-4 overflow-hidden rounded-xl border border-cardBorder bg-white p-3">
-          <img src={preview} alt="Prescription preview" className="h-48 w-full rounded-lg object-cover" />
+          {previewType === 'pdf' ? (
+            <iframe
+              src={preview}
+              title="Prescription PDF preview"
+              className="h-[560px] w-full rounded-lg"
+            />
+          ) : (
+            <img
+              src={preview}
+              alt="Prescription preview"
+              className="max-h-[560px] w-full rounded-lg object-contain"
+            />
+          )}
         </div>
       ) : null}
 
       <button
         type="button"
         className="button-primary mt-4 inline-flex items-center justify-center gap-2"
+        disabled={!selectedFile || loading}
         onClick={async () => {
+          if (!selectedFile) {
+            return;
+          }
+
           setLoading(true);
-          const scan = await scanPrescription();
+          const scan = await scanPrescription(selectedFile);
           onScanned(scan);
           setLoading(false);
         }}

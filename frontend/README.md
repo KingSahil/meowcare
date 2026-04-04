@@ -239,11 +239,9 @@ npm run dev
 Default environment variables:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_SOCKET_URL=ws://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_SOCKET_URL=ws://localhost:4001
 ```
-
-If you are running the bundled backend in this repo, its socket server defaults to port `3001`, so update `NEXT_PUBLIC_SOCKET_URL` to match that backend setting.
 
 ## What To Read First
 

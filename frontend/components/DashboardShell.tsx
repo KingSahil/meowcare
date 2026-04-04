@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { PropsWithChildren, useEffect, useState } from 'react';
-import { Bell, FileText, LayoutDashboard, Plus, Search, TriangleAlert, UserCircle2 } from 'lucide-react';
+import { Bell, Boxes, FileText, LayoutDashboard, Plus, Search, TriangleAlert, UserCircle2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -16,6 +16,7 @@ const pageMeta: Record<string, { eyebrow: string; title: string }> = {
   '/dashboard': { eyebrow: 'Dashboard', title: 'Connected patient overview' },
   '/dashboard/logs': { eyebrow: 'Logs', title: 'Medication timeline and AI notes' },
   '/dashboard/refills': { eyebrow: 'Refills', title: 'Prescription scans and stock management' },
+  '/dashboard/stock': { eyebrow: 'Stock', title: 'Full inventory and refill readiness' },
   '/dashboard/alerts': { eyebrow: 'Alerts', title: 'Active incidents and emergency monitoring' },
   '/dashboard/settings': { eyebrow: 'Settings', title: 'Operational preferences and environment' }
 };
@@ -87,21 +88,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
 
         <section className="flex min-h-screen flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/5 bg-[#161d1b]/70 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-8">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center">
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-ink">Aetheris Care</h1>
               </div>
-              <nav className="hidden items-center gap-6 lg:flex">
-                <Link href="/dashboard" className={`text-sm tracking-tight transition-colors ${pathname === '/dashboard' ? 'font-bold text-[#68dbae]' : 'text-white/55 hover:text-[#68dbae]'}`}>
-                  Live Monitor
-                </Link>
-                <Link href="/dashboard/logs" className={`text-sm tracking-tight transition-colors ${pathname === '/dashboard/logs' ? 'font-bold text-[#68dbae]' : 'text-white/55 hover:text-[#68dbae]'}`}>
-                  History
-                </Link>
-                <Link href="/dashboard/refills" className={`text-sm tracking-tight transition-colors ${pathname === '/dashboard/refills' ? 'font-bold text-[#68dbae]' : 'text-white/55 hover:text-[#68dbae]'}`}>
-                  Resources
-                </Link>
-              </nav>
             </div>
 
             <div className="flex items-center gap-3">
@@ -183,6 +173,10 @@ export function DashboardShell({ children }: PropsWithChildren) {
         <Link href="/dashboard/alerts" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/alerts' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
           <TriangleAlert className="h-5 w-5" />
           <span className="text-[10px] uppercase tracking-tight">Alerts</span>
+        </Link>
+        <Link href="/dashboard/stock" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/stock' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
+          <Boxes className="h-5 w-5" />
+          <span className="text-[10px] uppercase tracking-tight">Stock</span>
         </Link>
         <Link href="/dashboard/settings" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/settings' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
           <UserCircle2 className="h-5 w-5" />

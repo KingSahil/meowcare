@@ -2,7 +2,24 @@ import { DEMO_SCAN_RESULT } from '@/lib/demo-data';
 import { loadDemoSnapshot, saveDemoSnapshot } from '@/lib/storage';
 import type { AlertItem, BurnoutPoint, Medicine, ParsedAiInsight, Patient, ScanResult } from '@/lib/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+const fileToDataUrl = async (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        reject(new Error('Unable to read selected file'));
+        return;
+      }
+      resolve(result);
+    };
+
+    reader.onerror = () => reject(new Error('Unable to read selected file'));
+    reader.readAsDataURL(file);
+  });
 
 const getJson = async <T>(input: RequestInfo, init?: RequestInit): Promise<T> => {
   const response = await fetch(input, init);
@@ -148,15 +165,33 @@ export const fetchBurnoutSuggestion = async (mood: string): Promise<{ suggestion
 };
 
 export const simulateAiParse = async (input: string): Promise<ParsedAiInsight> => {
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  try {
+    const body = await getJson<{ data: { insight: ParsedAiInsight } }>(`${API_BASE}/api/ai/parse-reminder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: input })
+    });
 
-  return {
-    title: 'Parsed care note',
-    details: `Actionable summary: ${input}. Recommended follow-up is to confirm dose timing and hydration within the next check-in.`
-  };
+    return body.data.insight;
+  } catch {
+    return {
+      title: 'Parsed care note',
+      details: `Actionable summary: ${input}. Recommended follow-up is to confirm dose timing and hydration within the next check-in.`
+    };
+  }
 };
 
-export const scanPrescription = async (): Promise<ScanResult> => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return DEMO_SCAN_RESULT;
+export const scanPrescription = async (file: File): Promise<ScanResult> => {
+  try {
+    const image = await fileToDataUrl(file);
+    const body = await getJson<{ data: { scan: ScanResult } }>(`${API_BASE}/api/ai/scan-prescription`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image })
+    });
+
+    return body.data.scan;
+  } catch {
+    return DEMO_SCAN_RESULT;
+  }
 };
