@@ -1,85 +1,104 @@
-'use client';
+import React from 'react';
+import { cn } from '../lib/utils';
 
-import { AlertCircle, Clock3, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Medicine } from '@/lib/types';
+export type MedicationStatus = 'MISSED' | 'TAKEN' | 'PENDING';
 
-interface MedicineTableProps {
-  medicines: Medicine[];
-  onAdd?: () => void;
-  showAddButton?: boolean;
-}
-
-const statusClasses: Record<Medicine['status'], string> = {
-  taken: 'border-[#68dbae]/20 bg-[#68dbae]/10 text-[#86f8c9]',
-  missed: 'border-rose-500/20 bg-rose-500/10 text-rose-300',
-  pending: 'border-white/10 bg-[#242b29] text-white/65'
+export type Medication = {
+  id: number;
+  name: string;
+  dose: string;
+  time: string;
+  status: MedicationStatus;
+  stockDays: number;
+  quantity: number;
+  notes?: string;
 };
 
-export function MedicineTable({ medicines, onAdd, showAddButton = true }: MedicineTableProps) {
+type MedicineTableProps = {
+  medications: Medication[];
+  onAddMedicine: () => void;
+  onEditMedicine: (medication: Medication) => void;
+  onRefillNow: (medication: Medication) => void;
+};
+
+export default function MedicineTable({ medications, onAddMedicine, onEditMedicine, onRefillNow }: MedicineTableProps) {
   return (
-    <section className="space-y-6" id="logs" aria-labelledby="medicine-table-title">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 id="medicine-table-title" className="text-[28px] font-extrabold tracking-tight text-ink">
-            Daily Regimen
-          </h2>
-          <p className="text-body text-white/45">Current view: today&apos;s schedule, stock levels, and completion states.</p>
-        </div>
-        {showAddButton ? (
-          <button type="button" className="button-primary inline-flex items-center justify-center gap-2" onClick={onAdd}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add medicine
-          </button>
-        ) : null}
+    <div className="bg-surface-container-lowest border border-emerald-100 rounded-2xl p-8 shadow-sm">
+      <div className="flex justify-between items-center mb-8">
+        <h3 className="text-xl font-black text-on-surface tracking-tight">Medication Schedule</h3>
+        <button
+          onClick={onAddMedicine}
+          className="px-3 py-2 rounded-xl bg-primary text-on-primary text-[10px] font-black uppercase tracking-widest hover:opacity-90"
+        >
+          + Add Medicine
+        </button>
       </div>
 
-      <div className="space-y-3">
-        {medicines.map((medicine) => (
-          <article
-            key={medicine.id}
-            className={cn(
-              'group flex flex-col justify-between gap-4 rounded-xl border border-white/5 p-5 transition hover:bg-[#242b29]',
-              medicine.status === 'taken' ? 'bg-[#161d1b]/60 opacity-80' : 'bg-[#1a211f]'
-            )}
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-5">
-                <div
-                  className={cn(
-                    'flex h-12 w-12 items-center justify-center rounded-xl',
-                    medicine.status === 'taken'
-                      ? 'bg-[#242b29] text-white/40'
-                      : medicine.status === 'missed'
-                        ? 'bg-rose-500/10 text-rose-300'
-                        : 'bg-[#68dbae]/10 text-[#68dbae]'
-                  )}
-                >
-                  <Plus className="h-5 w-5 rotate-45" aria-hidden="true" />
-                </div>
-                <div>
-                  <h4 className={cn('text-sm font-bold', medicine.status === 'taken' && 'line-through')}>{medicine.name} <span className="font-normal text-white/35">{medicine.dosage}</span></h4>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/40">
-                    <Clock3 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                    {medicine.status === 'taken' ? 'Logged' : medicine.status === 'missed' ? 'Missed' : 'Next'}: {medicine.time}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                {medicine.stock <= 6 ? (
-                  <div className="inline-flex items-center gap-1 rounded-full border border-amber-500/15 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">
-                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                    Refill soon
-                  </div>
-                ) : null}
-                <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-semibold capitalize', statusClasses[medicine.status])}>
-                  {medicine.status}
-                </span>
-              </div>
-            </div>
-          </article>
-        ))}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[760px]">
+          <thead>
+            <tr className="text-[10px] text-secondary border-b border-surface-container uppercase tracking-widest font-black">
+              <th className="pb-4">Medicine Name</th>
+              <th className="pb-4">Dosage</th>
+              <th className="pb-4">Time</th>
+              <th className="pb-4 text-center">Status</th>
+              <th className="pb-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-surface-container/50">
+            {medications.map((med) => {
+              const lowStock = med.stockDays < 3;
+
+              return (
+                <tr key={med.id} className="group hover:bg-surface-container-low/30 transition-colors">
+                  <td className="py-5">
+                    <p className="font-black text-on-surface">{med.name}</p>
+                    {lowStock && (
+                      <p className="text-[10px] mt-1 text-tertiary font-black uppercase tracking-wider">
+                        Low stock warning: only {med.stockDays} day(s) left
+                      </p>
+                    )}
+                  </td>
+                  <td className="py-5 font-bold text-sm">{med.dose}</td>
+                  <td className="py-5 font-bold text-sm text-secondary">{med.time}</td>
+                  <td className="py-5">
+                    <div className="flex justify-center">
+                      <span
+                        className={cn(
+                          'px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase',
+                          med.status === 'TAKEN' && 'bg-primary text-on-primary shadow-sm',
+                          med.status === 'MISSED' && 'bg-tertiary text-on-tertiary shadow-sm',
+                          med.status === 'PENDING' && 'bg-surface-container text-secondary'
+                        )}
+                      >
+                        {med.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-5">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => onEditMedicine(med)}
+                        className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-surface-container-low border border-surface-variant/30 hover:bg-surface-container"
+                      >
+                        Edit
+                      </button>
+                      {lowStock && (
+                        <button
+                          onClick={() => onRefillNow(med)}
+                          className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-tertiary text-white hover:opacity-90"
+                        >
+                          Refill
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-    </section>
+    </div>
   );
 }

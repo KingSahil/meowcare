@@ -1,13 +1,6 @@
-import { clsx } from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-export const cn = (...inputs: Array<string | false | null | undefined>) => clsx(inputs);
-
-export const formatTimestamp = (value: string) =>
-  new Intl.DateTimeFormat('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: 'short'
-  }).format(new Date(value));
-
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}

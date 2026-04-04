@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Public+Sans:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Manrope", sans-serif;
+
+  --color-surface: #edf4f6;
+  --color-primary: #0c6a76;
+  --color-primary-container: #15889a;
+  --color-on-primary: #ffffff;
+  --color-secondary: #4f6470;
+  --color-secondary-container: #d4e5ee;
+  --color-tertiary: #8a4b5d;
+  --color-tertiary-container: #a65d74;
+  --color-on-surface: #142129;
+  --color-outline: #71828c;
+  --color-surface-container-low: #e7eff3;
+  --color-surface-container: #dfe9ee;
+  --color-surface-container-high: #d7e3ea;
+  --color-surface-container-highest: #cfdde4;
+  --color-surface-container-lowest: #f6fafc;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply w-full max-w-full overflow-x-hidden;
+  }
+
+  body {
+    @apply bg-surface text-on-surface font-sans;
+    background-image: radial-gradient(circle at 20% -10%, rgba(21, 136, 154, 0.12), transparent 35%), radial-gradient(circle at 95% 20%, rgba(138, 75, 93, 0.08), transparent 28%);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+}
+
