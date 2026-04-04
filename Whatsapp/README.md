@@ -33,6 +33,7 @@ On startup it:
 Still in `bot.js`:
 
 - when Baileys emits a QR code, it is printed to the terminal
+- the same QR is also exposed as a PNG at `/qr.png` by the bot's local QR server
 - when the connection opens, the scheduler starts
 - when the connection closes, the scheduler stops
 - if the disconnection was not a logout, the bot reconnects automatically
@@ -151,6 +152,7 @@ That means the backend remains the source for:
 Supported runtime variables include:
 
 - `WA_AUTH_DIR`
+- `WA_QR_HTTP_PORT` (default `4012`)
 - `API_BASE_URL`
 - `LOG_LEVEL`
 - `REMINDER_SNOOZE_MINUTES`
@@ -179,6 +181,14 @@ npm start
 ```
 
 On first run, scan the QR code shown in the terminal.
+
+You can also load the live QR image from:
+
+- `http://localhost:4012/qr.png`
+
+And check its state via:
+
+- `http://localhost:4012/health`
 
 ## What To Read First
 

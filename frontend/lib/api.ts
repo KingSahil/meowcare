@@ -4,6 +4,7 @@ import type { AlertItem, BurnoutPoint, Medicine, ParsedAiInsight, Patient, ScanR
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const CARE_USER_ID = '11111111-1111-1111-1111-111111111111';
+const CARE_PHONE = process.env.NEXT_PUBLIC_PATIENT_PHONE ?? '+918968520989';
 
 type ReminderRow = { id: string; medicine: string; dosage: string; time: string; quantity: number };
 
@@ -212,4 +213,62 @@ export const scanPrescription = async (file: File): Promise<ScanResult> => {
   } catch {
     return DEMO_SCAN_RESULT;
   }
+};
+
+export const fetchRemainingMedicineSummary = async (): Promise<string> => {
+  try {
+    const body = await getJson<{ data?: { text?: string }; message?: string }>(
+      `${API_BASE}/api/reminder/voice-query`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: CARE_USER_ID,
+          query: 'How much medicine is remaining?'
+        })
+      }
+    );
+
+    return body.data?.text ?? body.message ?? 'Unable to fetch remaining medicine summary right now.';
+  } catch {
+    const snapshot = loadDemoSnapshot();
+    const total = snapshot.medicines.reduce((sum, medicine) => sum + medicine.stock, 0);
+    const list = snapshot.medicines
+      .map((medicine) => `${medicine.name}: ${medicine.stock} dose${medicine.stock === 1 ? '' : 's'} remaining`)
+      .join(', ');
+
+    return `You have ${total} total dose${total === 1 ? '' : 's'} remaining. ${list}.`;
+  }
+};
+
+export const callPatientWithRemainingMedicine = async (): Promise<{ status: string; callSid?: string; message: string }> => {
+  const summary = await fetchRemainingMedicineSummary();
+
+  const body = await getJson<{
+    message: string;
+    data: { status: string; callSid?: string; error?: string };
+  }>(`${API_BASE}/api/call-reminder/trigger-now`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: CARE_USER_ID,
+      phone: CARE_PHONE,
+      medicine: 'Remaining medicines',
+      dosage: 'summary',
+      customScript: `Hello. This is your medicine stock update. ${summary} Please press or say taken when you hear this update.`
+    })
+  });
+
+  if (body.data.error) {
+    return {
+      status: body.data.status,
+      message: body.data.error
+    };
+  }
+
+  return {
+    status: body.data.status,
+    callSid: body.data.callSid,
+    message: body.message
+  };
 };

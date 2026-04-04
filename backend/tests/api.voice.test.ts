@@ -13,7 +13,7 @@ describe('Voice APIs', () => {
     const response = await requestJson<{
       success: boolean;
       text: string;
-      medicines: Array<{ name: string; dosage: string; time: string }>;
+      medicines: Array<{ name: string; dosage: string; time: string; quantity: number }>;
     }>(app, 'POST', '/api/voice/query', {
       userId: crypto.randomUUID(),
       query: 'List my medicines',
@@ -32,6 +32,39 @@ describe('Voice APIs', () => {
     expect(response.body.text).toContain('Metformin');
     expect(response.body.medicines.length).toBe(1);
     expect(response.body.medicines[0]?.name).toBe('Metformin');
+    expect(response.body.medicines[0]?.quantity).toBe(1);
+  });
+
+  test('POST /api/voice/query answers remaining medicine quantity', async () => {
+    const response = await requestJson<{
+      success: boolean;
+      text: string;
+      medicines: Array<{ name: string; quantity: number }>;
+    }>(app, 'POST', '/api/voice/query', {
+      userId: crypto.randomUUID(),
+      query: 'How much medicine is remaining?',
+      reminders: [
+        {
+          medicine: 'Metformin',
+          dosage: '500mg',
+          time: '08:00',
+          quantity: 2
+        },
+        {
+          medicine: 'Aspirin',
+          dosage: '75mg',
+          time: '21:00',
+          quantity: 1
+        }
+      ]
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.text).toContain('3 total doses');
+    expect(response.body.text).toContain('Metformin: 2 doses remaining');
+    expect(response.body.text).toContain('Aspirin: 1 dose remaining');
+    expect(response.body.medicines.length).toBe(2);
   });
 
   test('POST /api/reminder/voice-query uses saved reminders to answer', async () => {
@@ -48,7 +81,7 @@ describe('Voice APIs', () => {
     const response = await requestJson<{
       success: boolean;
       message: string;
-      data: { success: boolean; text: string; medicines: Array<{ name: string }> };
+      data: { success: boolean; text: string; medicines: Array<{ name: string; quantity: number }> };
       mode: 'mock' | 'supabase';
     }>(app, 'POST', '/api/reminder/voice-query', {
       userId,

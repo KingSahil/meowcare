@@ -7,6 +7,7 @@ export type ScheduleCallInput = {
   phone: string;
   medicine: string;
   dosage?: string;
+  customScript?: string;
   scheduledAtIso: string;
 };
 
@@ -16,6 +17,7 @@ export type ReminderCallJob = {
   phone: string;
   medicine: string;
   dosage?: string;
+  customScript?: string;
   scheduledAtIso: string;
   status: ReminderCallStatus;
   callSid?: string;
@@ -45,7 +47,30 @@ const requiredEnv = (name: string): string => {
 
 const publicBaseUrl = () => {
   const raw = requiredEnv('PUBLIC_BASE_URL');
-  return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  const trimmed = raw.trim();
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    const typoHint = trimmed.includes('.ngrok-fre')
+      ? ' It looks like a typo: use .ngrok-free.app (or another full public domain).'
+      : '';
+    throw new Error(
+      `PUBLIC_BASE_URL must be a valid absolute URL. Received: "${trimmed}".${typoHint}`
+    );
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error(
+      `PUBLIC_BASE_URL must use https so Twilio can reach webhooks securely. Received: "${trimmed}".`
+    );
+  }
+
+  // Keep an optional path prefix, but remove trailing slash to avoid double-slashes in callback routes.
+  const normalizedPath = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
+  return `${parsed.origin}${normalizedPath}`;
 };
 
 const buildTwilioAuthHeader = () => {
@@ -120,7 +145,9 @@ export const buildReminderTwiml = (jobId: string): string => {
   }
 
   const dosageText = job.dosage ? `, ${job.dosage}` : '';
-  const prompt = `Hello. This is your medicine reminder. It is time to take ${job.medicine}${dosageText}. After the beep, say if you have taken it, will take it later, or want to skip.`;
+  const prompt =
+    job.customScript?.trim() ||
+    `Hello. This is your medicine reminder. It is time to take ${job.medicine}${dosageText}. After the beep, say if you have taken it, will take it later, or want to skip.`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -208,6 +235,7 @@ export const scheduleReminderCall = (input: ScheduleCallInput): ReminderCallJob 
     phone: input.phone,
     medicine: input.medicine,
     dosage: input.dosage,
+    customScript: input.customScript,
     scheduledAtIso: new Date(scheduledMs).toISOString(),
     status: 'scheduled'
   };
@@ -229,6 +257,7 @@ export const triggerReminderCallNow = async (
     phone: input.phone,
     medicine: input.medicine,
     dosage: input.dosage,
+    customScript: input.customScript,
     scheduledAtIso: new Date().toISOString(),
     status: 'scheduled'
   };

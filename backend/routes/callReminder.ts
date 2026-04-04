@@ -33,6 +33,7 @@ export const callReminderRoutes = new Elysia({ prefix: '/api/call-reminder' })
           phone: body.phone,
           medicine: body.medicine,
           dosage: body.dosage,
+          customScript: body.customScript,
           scheduledAtIso: body.scheduledAt
         });
 
@@ -56,6 +57,7 @@ export const callReminderRoutes = new Elysia({ prefix: '/api/call-reminder' })
         phone: t.String({ minLength: 7 }),
         medicine: t.String({ minLength: 1 }),
         dosage: t.Optional(t.String({ minLength: 1 })),
+        customScript: t.Optional(t.String({ minLength: 1 })),
         scheduledAt: t.String({ minLength: 10 })
       }),
       detail: {
@@ -90,7 +92,8 @@ export const callReminderRoutes = new Elysia({ prefix: '/api/call-reminder' })
         userId: t.String({ minLength: 1 }),
         phone: t.String({ minLength: 7 }),
         medicine: t.String({ minLength: 1 }),
-        dosage: t.Optional(t.String({ minLength: 1 }))
+        dosage: t.Optional(t.String({ minLength: 1 })),
+        customScript: t.Optional(t.String({ minLength: 1 }))
       }),
       detail: {
         summary: 'Trigger medicine confirmation call immediately',

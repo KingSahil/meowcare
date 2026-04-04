@@ -1,8 +1,15 @@
 import { Server as SocketIOServer } from 'socket.io';
 import type { Alert, LogEntry } from '../types';
 
-let io: SocketIOServer | null = null;
-let shutdownHooksRegistered = false;
+type SocketGlobals = typeof globalThis & {
+  __meowcareSocketIO?: SocketIOServer | null;
+  __meowcareSocketHooksRegistered?: boolean;
+};
+
+const socketGlobals = globalThis as SocketGlobals;
+
+let io: SocketIOServer | null = socketGlobals.__meowcareSocketIO ?? null;
+let shutdownHooksRegistered = socketGlobals.__meowcareSocketHooksRegistered ?? false;
 
 const closeSocketServer = () => {
   if (!io) {
@@ -11,6 +18,7 @@ const closeSocketServer = () => {
 
   io.close();
   io = null;
+  socketGlobals.__meowcareSocketIO = null;
 };
 
 const registerShutdownHooks = () => {
@@ -19,6 +27,7 @@ const registerShutdownHooks = () => {
   }
 
   shutdownHooksRegistered = true;
+  socketGlobals.__meowcareSocketHooksRegistered = true;
 
   // Ensure watch-mode restarts release the socket port before the next boot.
   process.on('SIGINT', closeSocketServer);
@@ -49,6 +58,7 @@ export const initializeSocketServer = (port = Number(Bun.env.SOCKET_PORT ?? 3001
   });
 
   io.listen(port);
+  socketGlobals.__meowcareSocketIO = io;
   console.log(`[socket] listening on http://localhost:${port}`);
 
   return io;

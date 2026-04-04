@@ -13,8 +13,11 @@ export type VoiceQueryInput = {
 export type VoiceQueryResult = {
   success: boolean;
   text: string;
-  medicines: Array<{ name: string; dosage: string; time: string }>;
+  medicines: Array<{ name: string; dosage: string; time: string; quantity: number }>;
 };
+
+const isRemainingMedicineQuery = (query: string): boolean =>
+  /\b(remaining|left|stock|balance|pending|how many)\b/i.test(query);
 
 export const handleVoiceQuery = async (
   input: VoiceQueryInput,
@@ -33,7 +36,8 @@ export const handleVoiceQuery = async (
   const medicines = reminders.map((item) => ({
     name: item.medicine,
     dosage: item.dosage,
-    time: item.time
+    time: item.time,
+    quantity: item.quantity
   }));
 
   if (medicines.length === 0) {
@@ -41,6 +45,22 @@ export const handleVoiceQuery = async (
       success: true,
       text: 'No medicines are currently saved for this user.',
       medicines: []
+    };
+  }
+
+  if (isRemainingMedicineQuery(cleanQuery)) {
+    const remainingSummary = medicines
+      .map((m) => `${m.name}: ${m.quantity} dose${m.quantity === 1 ? '' : 's'} remaining`)
+      .join(', ');
+
+    const totalDosesRemaining = medicines.reduce((sum, medicine) => sum + medicine.quantity, 0);
+
+    return {
+      success: true,
+      text: `You have ${totalDosesRemaining} total dose${
+        totalDosesRemaining === 1 ? '' : 's'
+      } remaining. ${remainingSummary}.`,
+      medicines
     };
   }
 

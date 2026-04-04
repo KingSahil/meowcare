@@ -1,6 +1,6 @@
 import './env.js';
 import cron from 'node-cron';
-import { triggerSos } from './api.js';
+import { listReminders, triggerSos } from './api.js';
 
 const DEFAULT_SNOOZE_MINUTES = Number(process.env.REMINDER_SNOOZE_MINUTES ?? 15);
 const DEFAULT_SAFETY_WINDOW_HOURS = Number(process.env.SAFETY_WINDOW_HOURS ?? 6);
@@ -20,7 +20,7 @@ const demoPatientPhone = process.env.DEMO_PATIENT_PHONE ?? '+919988341071';
 const demoPatients = [
   {
     jid: phoneToJid(demoPatientPhone),
-    userId: process.env.DEMO_USER_ID ?? 'demo-user-001',
+    userId: process.env.DEMO_USER_ID ?? '11111111-1111-1111-1111-111111111111',
     phone: demoPatientPhone,
     medicine: process.env.DEMO_MEDICINE ?? 'BP medicine',
     timeLabel: process.env.DEMO_MEDICINE_TIME ?? 'Every 30 minutes',
@@ -31,6 +31,71 @@ const demoPatients = [
 
 function reminderCopy(patient) {
   return `\ud83d\udc8a Time to take ${patient.medicine}\n\ud83d\udee1\ufe0f Dose: ${patient.dosage}\n\u23f1\ufe0f When: ${patient.timeLabel}\n\ud83d\udcac Reply: taken / later / skip / sos`;
+}
+
+function parseTimeToMinutes(timeValue) {
+  if (!timeValue) {
+    return null;
+  }
+
+  const directMatch = String(timeValue).trim().match(/^(\d{1,2}):(\d{2})$/);
+
+  if (directMatch) {
+    const hours = Number(directMatch[1]);
+    const minutes = Number(directMatch[2]);
+
+    if (Number.isFinite(hours) && Number.isFinite(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+      return hours * 60 + minutes;
+    }
+  }
+
+  const dateLike = new Date(String(timeValue));
+  if (Number.isNaN(dateLike.getTime())) {
+    return null;
+  }
+
+  return dateLike.getHours() * 60 + dateLike.getMinutes();
+}
+
+function pickLatestReminder(reminders) {
+  if (!Array.isArray(reminders) || reminders.length === 0) {
+    return null;
+  }
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const normalized = reminders
+    .map((item) => {
+      const parsedMinutes = parseTimeToMinutes(item?.time);
+      return {
+        item,
+        parsedMinutes
+      };
+    })
+    .filter((entry) => entry.item && typeof entry.item.medicine === 'string');
+
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  const upcoming = normalized
+    .filter((entry) => entry.parsedMinutes !== null && entry.parsedMinutes >= nowMinutes)
+    .sort((left, right) => left.parsedMinutes - right.parsedMinutes);
+
+  if (upcoming.length > 0) {
+    return upcoming[0].item;
+  }
+
+  const sorted = normalized
+    .filter((entry) => entry.parsedMinutes !== null)
+    .sort((left, right) => left.parsedMinutes - right.parsedMinutes);
+
+  if (sorted.length > 0) {
+    return sorted[0].item;
+  }
+
+  return normalized[normalized.length - 1].item;
 }
 
 function safetyCopy(patient) {
@@ -57,7 +122,26 @@ export function createPatientState() {
 export function createScheduler({ sock, patientState }) {
   const tasks = [];
 
+  async function hydrateLatestReminder(state) {
+    try {
+      const response = await listReminders(state.userId);
+      const latest = pickLatestReminder(response?.data ?? []);
+
+      if (!latest) {
+        return;
+      }
+
+      state.medicine = latest.medicine ?? state.medicine;
+      state.dosage = latest.dosage ?? state.dosage;
+      state.timeLabel = latest.time ?? state.timeLabel;
+      state.quantity = latest.quantity ?? state.quantity;
+    } catch (error) {
+      console.error('[scheduler] Failed to sync reminders from backend:', error);
+    }
+  }
+
   async function sendReminder(state, reason = 'scheduled') {
+    await hydrateLatestReminder(state);
     state.awaitingReply = true;
     state.lastReminderAt = Date.now();
     state.waitingSinceAt = state.lastReminderAt;

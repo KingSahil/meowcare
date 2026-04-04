@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { PropsWithChildren, useEffect, useState } from 'react';
-import { LayoutDashboard, PlusCircle, Search, TriangleAlert, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, QrCode, Search, TriangleAlert, UserCircle2, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -22,6 +22,7 @@ export function DashboardShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const meta = pageMeta[pathname] ?? pageMeta['/dashboard'];
   const isOverview = pathname === '/dashboard';
+  const baileysQrUrl = process.env.NEXT_PUBLIC_BAILEYS_QR_URL ?? 'http://localhost:4012/qr.png';
   const {
     alerts,
     connected,
@@ -36,6 +37,8 @@ export function DashboardShell({ children }: PropsWithChildren) {
     setConnected
   } = useCareStore();
   const [demoNotified, setDemoNotified] = useState(false);
+  const [isBaileysQrOpen, setIsBaileysQrOpen] = useState(false);
+  const [qrImageFailed, setQrImageFailed] = useState(false);
 
   useEffect(() => {
     void initialize();
@@ -64,6 +67,23 @@ export function DashboardShell({ children }: PropsWithChildren) {
       setDemoNotified(true);
     }
   }, [demoMode, demoNotified, loading]);
+
+  useEffect(() => {
+    if (!isBaileysQrOpen) {
+      return;
+    }
+
+    setQrImageFailed(false);
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsBaileysQrOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isBaileysQrOpen]);
 
   if (loading || !patient) {
     return (
@@ -96,6 +116,15 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 <Search className="h-4 w-4 text-white/45" aria-hidden="true" />
                 <input className="bg-transparent text-xs text-ink outline-none placeholder:text-white/30" placeholder="Quick find patient..." />
               </label>
+              <button
+                type="button"
+                onClick={() => setIsBaileysQrOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-emerald-100 transition hover:bg-emerald-400/20"
+                aria-label="Open Baileys QR connect"
+              >
+                <QrCode className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Baileys Connect</span>
+              </button>
               <Link href="/dashboard/settings" className="rounded-full p-2 text-white/60 transition hover:text-[#68dbae]" aria-label="Profile">
                 <UserCircle2 className="h-5 w-5" />
               </Link>
@@ -169,6 +198,54 @@ export function DashboardShell({ children }: PropsWithChildren) {
       </nav>
 
       <SOSOverlay open={sosOpen} onClose={closeSos} />
+
+      {isBaileysQrOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-md" onClick={() => setIsBaileysQrOpen(false)}>
+          <section
+            className="w-full max-w-md rounded-3xl border border-white/15 bg-[#0f1614]/95 p-6 shadow-[0_28px_90px_rgba(0,0,0,0.55)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Baileys WhatsApp QR code"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300/80">WhatsApp Pairing</p>
+                <h3 className="mt-2 text-lg font-bold text-ink">Scan to Connect Baileys</h3>
+              </div>
+              <button
+                type="button"
+                className="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+                onClick={() => setIsBaileysQrOpen(false)}
+                aria-label="Close Baileys QR dialog"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white p-4">
+              {baileysQrUrl && !qrImageFailed ? (
+                <img
+                  src={baileysQrUrl}
+                  alt="Baileys WhatsApp QR code"
+                  className="mx-auto h-64 w-64 rounded-lg object-contain"
+                  onError={() => setQrImageFailed(true)}
+                />
+              ) : (
+                <div className="flex h-64 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center">
+                  <p className="max-w-[210px] text-sm font-semibold text-slate-600">
+                    QR not available yet. Start Whatsapp bot and scan from this dialog.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="mt-4 text-sm text-white/65">
+              Open WhatsApp on your phone, go to Linked Devices, then scan this QR code.
+            </p>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
