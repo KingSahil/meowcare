@@ -1,0 +1,20 @@
+{
+  "meal_times": {
+    "breakfast": "09:00",
+    "lunch": "15:00",
+    "dinner": "21:00"
+  },
+  "daypart_times": {
+    "morning": "08:00",
+    "afternoon": "14:00",
+    "evening": "18:00",
+    "night": "21:00",
+    "bedtime": "22:00"
+  },
+  "before_food_minutes": 30,
+  "after_food_minutes": 30,
+  "with_food_minutes": 0,
+  "empty_stomach_before_minutes": 60,
+  "empty_stomach_after_minutes": 120,
+  "empty_stomach_strategy": "before_meal"
+}
