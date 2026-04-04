@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { getDataMode } from '../db/supabase';
 import { addReminder, getRemindersForUser } from '../services/reminderService';
-import { handleVoiceQuery } from '../../gemini-module/controllers/voiceController';
+import { handleVoiceQuery } from '../services/voiceService';
 
 export const reminderRoutes = new Elysia({ prefix: '/api/reminder' })
   .post(

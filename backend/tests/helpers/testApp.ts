@@ -5,7 +5,7 @@ import { burnoutRoutes } from '../../routes/burnout';
 import { reminderRoutes } from '../../routes/reminder';
 import { sosRoutes } from '../../routes/sos';
 import { statusRoutes } from '../../routes/status';
-import { handleVoiceQuery } from '../../../gemini-module/controllers/voiceController';
+import { handleVoiceQuery } from '../../services/voiceService';
 
 const port = Number(Bun.env.PORT ?? 3000);
 const socketPort = Number(Bun.env.SOCKET_PORT ?? 3001);
