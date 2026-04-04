@@ -14,7 +14,7 @@ import { createPatientState, createScheduler } from './scheduler.js';
 
 const AUTH_DIR = process.env.WA_AUTH_DIR ?? '../auth';
 const logger = pino({ level: process.env.LOG_LEVEL ?? 'silent' });
-const QR_HTTP_PORT = Number.parseInt(process.env.WA_QR_HTTP_PORT ?? '4012', 10);
+const QR_HTTP_PORT = Number.parseInt(process.env.PORT ?? process.env.WA_QR_HTTP_PORT ?? '4012', 10);
 
 const patientState = createPatientState();
 let latestQrPayload = null;
