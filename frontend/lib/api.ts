@@ -1,6 +1,15 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:4001';
-const WHATSAPP_BASE_URL = import.meta.env.VITE_WHATSAPP_BASE_URL ?? 'http://localhost:4012';
+const normalizeBaseUrl = (value: string | undefined, fallback: string) =>
+  (value && value.trim() ? value : fallback).replace(/\/+$/, '');
+
+const API_BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_API_BASE_URL,
+  'https://meowcare-backend.onrender.com'
+);
+const SOCKET_URL = normalizeBaseUrl(import.meta.env.VITE_SOCKET_URL, 'http://localhost:4001');
+const WHATSAPP_BASE_URL = normalizeBaseUrl(
+  import.meta.env.VITE_WHATSAPP_BASE_URL,
+  'https://meowcare-whatsapp-bot.onrender.com'
+);
 
 export type BackendResponse<T> = {
   success: boolean;
