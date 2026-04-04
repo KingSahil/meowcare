@@ -1,7 +1,6 @@
 import './env.js';
 import makeWASocket, {
   DisconnectReason,
-  downloadMediaMessage,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   useMultiFileAuthState
@@ -84,16 +83,6 @@ async function startBot() {
       await handleIncomingMessage({
         sock,
         baileysMessage: message,
-        downloadMedia: async () =>
-          downloadMediaMessage(
-            message,
-            'buffer',
-            {},
-            {
-              logger,
-              reuploadRequest: sock.updateMediaMessage
-            }
-          ),
         patientState,
         markUserReplied: scheduler.markUserReplied,
         scheduleSnoozeReminder: scheduler.scheduleSnoozeReminder

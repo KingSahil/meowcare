@@ -30,7 +30,7 @@ const demoPatients = [
 ];
 
 function reminderCopy(patient) {
-  return `💊 Time to take ${patient.medicine}\nDose: ${patient.dosage}\nWhen: ${patient.timeLabel}\nReply: taken / later`;
+  return `\ud83d\udc8a Time to take ${patient.medicine}\n\ud83d\udee1\ufe0f Dose: ${patient.dosage}\n\u23f1\ufe0f When: ${patient.timeLabel}\n\ud83d\udcac Reply: taken / later / skip / sos`;
 }
 
 function safetyCopy(patient) {
@@ -65,7 +65,7 @@ export function createScheduler({ sock, patientState }) {
     await sock.sendMessage(state.jid, {
       text:
         reason === 'snooze'
-          ? `⏰ Gentle follow-up\n${reminderCopy(state)}`
+          ? `\u23f0 Gentle follow-up\n${reminderCopy(state)}`
           : reminderCopy(state)
     });
   }
@@ -140,7 +140,7 @@ export function createScheduler({ sock, patientState }) {
           state.lastAlertAt = now;
 
           await sock.sendMessage(state.jid, {
-            text: '🚨 Emergency alert sent'
+            text: '\ud83d\udea8 Emergency alert sent'
           });
         } catch (error) {
           console.error('[scheduler] Failed to trigger passive safety alert:', error);

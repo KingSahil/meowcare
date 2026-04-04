@@ -1,6 +1,5 @@
-import { queryMedicineInfo, transcribeAudio, triggerSos, updateStatus } from './api.js';
+import { queryMedicineInfo, triggerSos, updateStatus } from './api.js';
 
-const VALID_COMMANDS = new Set(['taken', 'later', 'skip', 'sos']);
 const MEDICINE_QUERY_PATTERN =
   /\b(medicine|medicines|medication|medications|meds|dose|dosage|schedule|routine|timing|next|when|what time|what's next|should i take|take)\b/i;
 
@@ -96,16 +95,8 @@ function unwrapMessageContent(messageContent) {
   return messageContent;
 }
 
-function getMessageContent(baileysMessage) {
-  return unwrapMessageContent(baileysMessage?.message);
-}
-
-function getAudioMessage(baileysMessage) {
-  return getMessageContent(baileysMessage)?.audioMessage ?? null;
-}
-
 function extractText(baileysMessage) {
-  const messageContent = getMessageContent(baileysMessage);
+  const messageContent = unwrapMessageContent(baileysMessage?.message);
 
   if (!messageContent) {
     return '';
@@ -131,10 +122,6 @@ function extractText(baileysMessage) {
     templateButtonReplyMessage?.selectedDisplayText ||
     ''
   );
-}
-
-function hasVoiceMessage(baileysMessage) {
-  return Boolean(getAudioMessage(baileysMessage));
 }
 
 function extractCommand(text) {
@@ -173,44 +160,20 @@ function buildReminderPayload(state) {
   ];
 }
 
-function buildSpeechContexts(state) {
-  return [
-    {
-      phrases: [
-        state.medicine,
-        state.dosage,
-        state.timeLabel ?? '',
-        'when is my medicine',
-        'what is my schedule',
-        'what medicines am I taking',
-        'when should I take my tablet',
-        'taken',
-        'later',
-        'skip',
-        'sos'
-      ].filter(Boolean)
-    }
-  ];
-}
-
-function getTranscriptionConfig(audioMessage, state) {
-  const mimeType = audioMessage?.mimetype?.toLowerCase() ?? '';
-
-  if (mimeType.includes('webm')) {
-    return {
-      encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,
-      originalMimeType: audioMessage.mimetype,
-      speechContexts: buildSpeechContexts(state)
-    };
+function isConnectionRefusedError(error) {
+  if (!error) {
+    return false;
   }
 
-  return {
-    encoding: 'OGG_OPUS',
-    sampleRateHertz: 48000,
-    originalMimeType: audioMessage?.mimetype,
-    speechContexts: buildSpeechContexts(state)
-  };
+  if (error?.cause?.code === 'ECONNREFUSED') {
+    return true;
+  }
+
+  if (Array.isArray(error?.cause?.errors)) {
+    return error.cause.errors.some((innerError) => innerError?.code === 'ECONNREFUSED');
+  }
+
+  return false;
 }
 
 async function sendReply(sock, jid, text) {
@@ -233,37 +196,6 @@ async function handleMedicineQuery({ sock, context, rawText }) {
   await sendReply(sock, context.jid, replyText);
 }
 
-async function handleVoiceQuery({ sock, baileysMessage, context, downloadMedia }) {
-  if (!downloadMedia) {
-    throw new Error('Voice note download is not available.');
-  }
-
-  const audioMessage = getAudioMessage(baileysMessage);
-  if (!audioMessage) {
-    throw new Error('Voice note metadata is missing.');
-  }
-
-  const audioBuffer = await downloadMedia();
-  if (!audioBuffer?.length) {
-    throw new Error('Voice note was empty.');
-  }
-
-  const { transcript } = await transcribeAudio(
-    audioBuffer,
-    getTranscriptionConfig(audioMessage, context.state)
-  );
-
-  console.log(
-    `[handler] Voice transcript for ${context.jid}: "${transcript}" mimeType=${audioMessage.mimetype || 'unknown'}`
-  );
-
-  await handleMedicineQuery({
-    sock,
-    context,
-    rawText: transcript
-  });
-}
-
 async function handleTaken({ sock, context, state, markUserReplied }) {
   await updateStatus({
     userId: context.userId,
@@ -274,7 +206,7 @@ async function handleTaken({ sock, context, state, markUserReplied }) {
 
   markUserReplied(state.jid);
   state.awaitingReply = false;
-  await sendReply(sock, context.jid, '✅ Noted');
+  await sendReply(sock, context.jid, '\u2705 Noted. Medicine marked as taken.');
 }
 
 async function handleLater({ sock, context, state, markUserReplied, scheduleSnoozeReminder }) {
@@ -287,7 +219,7 @@ async function handleLater({ sock, context, state, markUserReplied, scheduleSnoo
 
   markUserReplied(state.jid);
   state.awaitingReply = true;
-  await sendReply(sock, context.jid, '⏰ Reminder postponed');
+  await sendReply(sock, context.jid, '\u23f0 Reminder postponed. I will ping you again soon.');
   scheduleSnoozeReminder(state);
 }
 
@@ -301,7 +233,7 @@ async function handleSkip({ sock, context, state, markUserReplied }) {
 
   markUserReplied(state.jid);
   state.awaitingReply = false;
-  await sendReply(sock, context.jid, '✅ Noted');
+  await sendReply(sock, context.jid, '\u23ed\ufe0f Noted. I marked this dose as skipped.');
 }
 
 async function handleSos({ sock, context, state, markUserReplied }) {
@@ -314,13 +246,12 @@ async function handleSos({ sock, context, state, markUserReplied }) {
   markUserReplied(state.jid);
   state.awaitingReply = false;
   state.lastAlertAt = Date.now();
-  await sendReply(sock, context.jid, '🚨 Emergency alert sent');
+  await sendReply(sock, context.jid, '\ud83d\udea8 Emergency alert sent.');
 }
 
 export async function handleIncomingMessage({
   sock,
   baileysMessage,
-  downloadMedia,
   patientState,
   markUserReplied,
   scheduleSnoozeReminder
@@ -349,18 +280,12 @@ export async function handleIncomingMessage({
   const rawText = extractText(baileysMessage);
   const text = extractCommand(rawText);
   const context = buildContext(jid, text, state);
-  const hasVoiceNote = hasVoiceMessage(baileysMessage);
 
   console.log(
-    `[handler] Received message from ${jid}. remoteJid=${remoteJid || 'none'} Raw text: "${rawText}" Command: "${text || 'none'}" Voice=${hasVoiceNote}`
+    `[handler] Received message from ${jid}. remoteJid=${remoteJid || 'none'} Raw text: "${rawText}" Command: "${text || 'none'}"`
   );
 
   try {
-    if (hasVoiceNote) {
-      await handleVoiceQuery({ sock, baileysMessage, context, downloadMedia });
-      return;
-    }
-
     if (text === 'taken') {
       await handleTaken({ sock, context, state, markUserReplied });
       return;
@@ -390,7 +315,9 @@ export async function handleIncomingMessage({
     await sendReply(
       sock,
       jid,
-      '⚠️ I could not understand that voice note. Please try again or send the question as text.'
+      isConnectionRefusedError(error)
+        ? '\u26a0\ufe0f The backend service is not running right now, so I could not process that message.'
+        : '\u26a0\ufe0f Something went wrong while processing your message. Please try again.'
     );
     return;
   }
@@ -399,7 +326,7 @@ export async function handleIncomingMessage({
     await sendReply(
       sock,
       jid,
-      '💡 Please reply with: taken / later / skip / sos'
+      '\ud83d\udcac Please reply with: taken / later / skip / sos'
     );
   }
 }
