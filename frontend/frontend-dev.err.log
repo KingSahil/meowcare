@@ -1,0 +1,54 @@
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⨯ ./node_modules/next/dist/lib/require-instrumentation-client.js:11:1
+Module not found: Can't resolve 'private-next-instrumentation-client'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./node_modules/next/dist/client/app-next-dev.js
+ ⨯ ./node_modules/next/dist/lib/require-instrumentation-client.js:11:1
+Module not found: Can't resolve 'private-next-instrumentation-client'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./node_modules/next/dist/client/app-next-dev.js
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+⨯ Error: ENOENT: no such file or directory, open 'E:\ZCode\WEB DEV\caretake\practice\frontend\.next\dev\required-server-files.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\ZCode\\WEB DEV\\caretake\\practice\\frontend\\.next\\dev\\required-server-files.json',
+  page: '/connect'
+}
+⨯ Error: ENOENT: no such file or directory, open 'E:\ZCode\WEB DEV\caretake\practice\frontend\.next\dev\required-server-files.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\ZCode\\WEB DEV\\caretake\\practice\\frontend\\.next\\dev\\required-server-files.json'
+}
+Error: ENOENT: no such file or directory, open 'E:\ZCode\WEB DEV\caretake\practice\frontend\.next\dev\required-server-files.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\ZCode\\WEB DEV\\caretake\\practice\\frontend\\.next\\dev\\required-server-files.json',
+  page: '/connect'
+}
+⨯ Error: ENOENT: no such file or directory, open 'E:\ZCode\WEB DEV\caretake\practice\frontend\.next\dev\required-server-files.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\ZCode\\WEB DEV\\caretake\\practice\\frontend\\.next\\dev\\required-server-files.json'
+}
+Error: ENOENT: no such file or directory, open 'E:\ZCode\WEB DEV\caretake\practice\frontend\.next\dev\required-server-files.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\ZCode\\WEB DEV\\caretake\\practice\\frontend\\.next\\dev\\required-server-files.json'
+}
+^C

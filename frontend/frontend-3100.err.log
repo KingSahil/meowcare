@@ -1,0 +1,9 @@
+⚠ `experimental.typedRoutes` has been moved to `typedRoutes`. Please update your next.config.mjs file accordingly.
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3000
+- PID:          13440
+- Dir:          E:\ZCode\WEB DEV\caretake\practice\frontend
+- Log:          .next\dev\logs\next-development.log
+
+Run taskkill /PID 13440 /F to stop it.

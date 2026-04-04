@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Manrope", "Segoe UI", sans-serif;
+  --background: #f5f3ee;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: #ffffff;
+  --surface-muted: #ece7de;
+  --border: rgba(32, 28, 22, 0.1);
+  --border-strong: rgba(32, 28, 22, 0.16);
+  --text: #171411;
+  --muted: #6f685f;
+  --accent: #1f6b57;
+  --accent-strong: #174f41;
+  --danger: #8a3831;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(31, 107, 87, 0.08), transparent 26%),
+    linear-gradient(180deg, #faf8f3 0%, var(--background) 100%);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(31, 107, 87, 0.18);
+  outline-offset: 2px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(28, 22, 15, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.input-base {
+  min-height: 44px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.input-base::placeholder {
+  color: var(--muted);
+}
+
+.button-primary {
+  min-height: 44px;
+  border-radius: 8px;
+  background: var(--text);
+  color: #f7f4ef;
+  padding: 10px 16px;
+  font-weight: 700;
+  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease;
+}
+
+.button-primary:hover {
+  transform: translateY(-1px);
+  background: #26211b;
+}
+
+.button-secondary {
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 10px 16px;
+  font-weight: 600;
+}
+
+.button-danger {
+  min-height: 44px;
+  border-radius: 8px;
+  background: rgba(138, 56, 49, 0.08);
+  border: 1px solid rgba(138, 56, 49, 0.18);
+  color: var(--danger);
+  padding: 10px 16px;
+  font-weight: 600;
+}
+
+.glass-panel {
+  backdrop-filter: blur(12px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.vital-glow {
+  box-shadow: 0 0 0 1px rgba(31, 107, 87, 0.08), 0 18px 44px rgba(28, 22, 15, 0.08);
+}

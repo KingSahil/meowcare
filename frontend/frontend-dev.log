@@ -1,0 +1,26 @@
+
+> remote-care-companion-frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.30
+  - Local:        http://localhost:3001
+  - Experiments (use with caution):
+    · typedRoutes
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.5s (477 modules)
+ GET / 307 in 4756ms
+ ○ Compiling /connect ...
+ ✓ Compiled /connect in 3.6s (514 modules)
+ GET /connect 200 in 3685ms
+▲ Next.js 16.2.2 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.31.169.221:3000
+✓ Ready in 0ms
+
+○ Compiling /connect ...
+○ Compiling /_error ...
+ GET /connect 500 in 13.0s
+ GET /connect 500 in 13.0s
