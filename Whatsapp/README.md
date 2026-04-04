@@ -190,6 +190,24 @@ And check its state via:
 
 - `http://localhost:4012/health`
 
+## Render Deployment
+
+This bot is a better fit for Render than Vercel because it keeps a long-lived WhatsApp Web session, cron jobs, and a persistent auth directory.
+
+This repo now includes [render.yaml](/c:/Users/aanch/meowcare/render.yaml) with:
+
+- a Node web service rooted at `Whatsapp`
+- `PORT`-based HTTP binding for `/health` and `/qr.png`
+- a persistent disk mounted at `/var/data`
+- `WA_AUTH_DIR=/var/data/wa-auth` so the QR login survives restarts
+
+Before deploying, set:
+
+- `API_BASE_URL` to your deployed backend URL
+- `DEMO_PATIENT_PHONE` to the caregiver or patient WhatsApp number you want to test with
+
+If you deploy the backend from the same [render.yaml](/c:/Users/aanch/meowcare/render.yaml), set `API_BASE_URL` to the public Render URL of `meowcare-backend`.
+
 ## What To Read First
 
 If you want to understand the bot quickly, read files in this order:

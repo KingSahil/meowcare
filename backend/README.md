@@ -59,6 +59,13 @@ cd backend
 bun run start
 ```
 
+Render-style start:
+
+```bash
+cd backend
+bun run server.ts
+```
+
 Type-check:
 
 ```bash
@@ -83,6 +90,29 @@ DEEPGRAM_API_KEY=your-deepgram-api-key
 ```
 
 `PUBLIC_BASE_URL` must be reachable by Twilio webhooks (use ngrok or a deployed URL in development).
+
+## Render Deployment
+
+This repo now includes [render.yaml](/c:/Users/aanch/meowcare/render.yaml) with a `meowcare-backend` web service.
+
+Recommended Render settings come from that blueprint:
+
+- `rootDir`: `backend`
+- `buildCommand`: `bun install`
+- `startCommand`: `bun run server.ts`
+- `healthCheckPath`: `/`
+
+Set these environment variables in Render:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `PUBLIC_BASE_URL`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER`
+- `DEEPGRAM_API_KEY`
+
+After Render gives you the backend URL, set `PUBLIC_BASE_URL` to that same public Render URL so Twilio callback routes resolve correctly.
 
 ## Medicine Confirmation Calls (Twilio + Deepgram)
 

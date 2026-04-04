@@ -17,20 +17,27 @@ export default function Landing() {
   return (
     <div className="bg-surface min-h-screen">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-emerald-50/80 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,81,58,0.06)]">
-        <div className="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto w-full">
-          <div className="text-xl font-extrabold text-emerald-900 font-headline tracking-tight">
-            Remote Care Companion
-          </div>
-          <div className="hidden md:flex items-center gap-8 font-headline font-semibold tracking-tight text-slate-600">
-            <a href="#" className="text-emerald-700 border-b-2 border-emerald-700 pb-1">Features</a>
-            <a href="#" className="hover:text-emerald-800 transition-all">Caretakers</a>
-            <a href="#" className="hover:text-emerald-800 transition-all">AI Insights</a>
-            <a href="#" className="hover:text-emerald-800 transition-all">Support</a>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="hidden lg:block text-emerald-900 font-semibold px-4 py-2 hover:opacity-70 transition-opacity">Log In</Link>
-            <Link to="/dashboard" className="bg-primary text-on-primary font-semibold px-6 py-2.5 rounded-full hover:opacity-90 transition-all shadow-md">
+      <nav className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-6">
+        <div className="mx-auto flex max-w-4xl items-center justify-between rounded-[24px] border border-white/14 bg-slate-950/42 px-4 py-2.5 text-white shadow-xl shadow-slate-950/15 backdrop-blur-xl md:px-5">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-cyan-400 shadow-lg shadow-cyan-950/30 transition-transform group-hover:rotate-6">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="block text-base font-black tracking-[0.12em] uppercase text-white">
+                healthcare
+              </span>
+              <span className="block text-[9px] font-bold uppercase tracking-[0.24em] text-white/60">
+                Remote Companion
+              </span>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard" className="hidden sm:inline-flex rounded-2xl border border-white/8 bg-white/6 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:bg-white/10">
+              Log In
+            </Link>
+            <Link to="/dashboard" className="rounded-2xl bg-primary px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-on-primary shadow-lg shadow-emerald-950/25 transition-all hover:-translate-y-0.5 hover:opacity-95">
               Get Started
             </Link>
           </div>
@@ -270,25 +277,25 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-12 py-16 flex flex-col md:flex-row gap-12 justify-between items-start">
           <div className="space-y-4 max-w-xs">
             <div className="font-headline font-bold text-emerald-800 text-2xl">Remote Care Companion</div>
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-slate-700 text-sm leading-relaxed">
               © 2024 Remote Care Companion. Digital Sanctuary for Health Monitoring. Providing technology with a human touch.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-16">
             <div className="space-y-4">
               <p className="font-bold text-emerald-900 uppercase text-xs tracking-widest">Platform</p>
-              <ul className="flex flex-col gap-2 text-sm text-slate-500">
-                <li><a href="#" className="hover:underline">Privacy Policy</a></li>
-                <li><a href="#" className="hover:underline">Terms of Service</a></li>
-                <li><a href="#" className="hover:underline">Medical Disclaimer</a></li>
+              <ul className="flex flex-col gap-2 text-sm text-slate-700">
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Privacy Policy</a></li>
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Terms of Service</a></li>
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Medical Disclaimer</a></li>
               </ul>
             </div>
             <div className="space-y-4">
               <p className="font-bold text-emerald-900 uppercase text-xs tracking-widest">Company</p>
-              <ul className="flex flex-col gap-2 text-sm text-slate-500">
-                <li><a href="#" className="hover:underline">Our Story</a></li>
-                <li><a href="#" className="hover:underline">Careers</a></li>
-                <li><a href="#" className="hover:underline">Contact</a></li>
+              <ul className="flex flex-col gap-2 text-sm text-slate-700">
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Our Story</a></li>
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Careers</a></li>
+                <li><a href="#" className="transition-colors hover:text-emerald-900 hover:underline">Contact</a></li>
               </ul>
             </div>
           </div>
@@ -301,7 +308,7 @@ export default function Landing() {
               }}
               className="flex gap-2"
             >
-              <input className="bg-surface-container-high border-none rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-primary w-48" placeholder="Email address" type="email" required />
+              <input className="w-48 rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:ring-2 focus:ring-primary" placeholder="Email address" type="email" required />
               <button type="submit" className="bg-primary text-on-primary p-2 rounded-lg hover:opacity-90 active:scale-95 transition-transform">
                 <ArrowRight className="w-4 h-4" />
               </button>
