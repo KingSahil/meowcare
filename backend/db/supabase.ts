@@ -10,8 +10,8 @@ import type {
   User
 } from '../types';
 
-const supabaseUrl = Bun.env.SUPABASE_URL;
-const supabaseAnonKey = Bun.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 export const supabase: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;

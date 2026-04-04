@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 export interface ParsedAiInsight {
   title: string;
@@ -26,8 +27,9 @@ type ParseReminderFn = (text: string, options?: AiModuleOptions) => Promise<any>
 type ExtractMedicinesAndRemindersFn = (imageSource: string, options?: AiModuleOptions) => Promise<any>;
 
 const require = createRequire(import.meta.url);
-const parseReminderModulePath = path.resolve(import.meta.dir, '..', '..', 'ai-module', 'parseReminder.js');
-const ocrModulePath = path.resolve(import.meta.dir, '..', '..', 'ai-module', 'ocr.js');
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const parseReminderModulePath = path.resolve(currentDir, '..', '..', 'ai-module', 'parseReminder.js');
+const ocrModulePath = path.resolve(currentDir, '..', '..', 'ai-module', 'ocr.js');
 
 let parseReminderFn: ParseReminderFn | null = null;
 let extractMedicinesAndRemindersFn: ExtractMedicinesAndRemindersFn | null = null;

@@ -11,10 +11,14 @@ import { voiceRoutes } from './routes/voice';
 import { getDataMode, getRuntimeNote } from './db/supabase';
 import { initializeSocketServer } from './socket/socket';
 
-const port = Number(Bun.env.PORT ?? 4000);
-const socketPort = Number(Bun.env.SOCKET_PORT ?? 4001);
+const port = Number(process.env.PORT ?? 4000);
+const socketPort = Number(process.env.SOCKET_PORT ?? 4001);
+const isVercelRuntime = process.env.VERCEL === '1';
+const shouldStartSocketServer = process.env.VERCEL !== '1' && process.env.DISABLE_SOCKET_SERVER !== '1';
 
-initializeSocketServer(socketPort);
+if (shouldStartSocketServer) {
+  initializeSocketServer(socketPort);
+}
 
 const app = new Elysia()
   .use(
@@ -57,7 +61,8 @@ const app = new Elysia()
         httpPort: port,
         socketPort,
         mode: getDataMode(),
-        note: getRuntimeNote()
+        note: getRuntimeNote(),
+        socketServerEnabled: shouldStartSocketServer
       }
     }),
     {
@@ -92,9 +97,13 @@ const app = new Elysia()
       message
     };
   })
-  .listen(port);
+;
 
-console.log(`[server] Remote Care Companion API running at http://localhost:${port}`);
-console.log(`[server] Data mode: ${getDataMode()} | ${getRuntimeNote()}`);
+if (!isVercelRuntime) {
+  app.listen(port);
+  console.log(`[server] Remote Care Companion API running at http://localhost:${port}`);
+  console.log(`[server] Data mode: ${getDataMode()} | ${getRuntimeNote()}`);
+}
 
 export type App = typeof app;
+export default app.fetch;

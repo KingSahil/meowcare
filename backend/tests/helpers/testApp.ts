@@ -7,8 +7,8 @@ import { sosRoutes } from '../../routes/sos';
 import { statusRoutes } from '../../routes/status';
 import { handleVoiceQuery } from '../../services/voiceService';
 
-const port = Number(Bun.env.PORT ?? 4000);
-const socketPort = Number(Bun.env.SOCKET_PORT ?? 4001);
+const port = Number(process.env.PORT ?? 4000);
+const socketPort = Number(process.env.SOCKET_PORT ?? 4001);
 
 const voiceRoutes = new Elysia({ prefix: '/api/voice' }).post(
   '/query',

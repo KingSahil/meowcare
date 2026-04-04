@@ -36,7 +36,7 @@ const TWILIO_BASE_URL = 'https://api.twilio.com/2010-04-01';
 const DEEPGRAM_LISTEN_URL = 'https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true';
 
 const requiredEnv = (name: string): string => {
-  const value = Bun.env[name]?.trim();
+  const value = process.env[name]?.trim();
 
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);

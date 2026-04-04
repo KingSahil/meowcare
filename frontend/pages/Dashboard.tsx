@@ -32,6 +32,7 @@ import { useCare, type PatientProfile, type VitalsSnapshot } from '../context/Ca
 import { getWhatsappHealth, getWhatsappQrUrl, parseReminderText, scanPrescription, triggerCallReminderNow, voiceQuery } from '../lib/api';
 import { generatePDF } from '../lib/pdfGenerator';
 import { cn } from '../lib/utils';
+import { getDashboardHeartRateTrend } from '../lib/vitalsChart';
 
 type SchedulePeriod = 'Morning' | 'Afternoon' | 'Night';
 
@@ -59,15 +60,6 @@ const moodOptions = [
   { icon: Frown, label: 'Tired', value: 'overwhelmed' }
 ] as const;
 
-const chartDataForVitals = (heartRate: number) => [
-  { time: '08:00', bpm: Math.max(heartRate - 4, 60) },
-  { time: '10:00', bpm: Math.max(heartRate - 1, 60) },
-  { time: '12:00', bpm: heartRate + 3 },
-  { time: '14:00', bpm: heartRate },
-  { time: '16:00', bpm: Math.max(heartRate - 2, 60) },
-  { time: '18:00', bpm: heartRate + 1 }
-];
-
 const scheduleToClock = (schedule: SchedulePeriod[]) => {
   const mapping: Record<SchedulePeriod, string> = {
     Morning: '08:00',
@@ -85,6 +77,12 @@ const fileToDataUrl = (file: File) =>
     reader.onerror = () => reject(new Error('Unable to read file.'));
     reader.readAsDataURL(file);
   });
+
+const isPdfDocument = (file: File | null) =>
+  Boolean(
+    file &&
+      (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))
+  );
 
 function ModalFrame({
   title,
@@ -275,6 +273,7 @@ export default function Dashboard() {
     vitals,
     medications,
     alerts,
+    logs,
     burnoutInsight,
     setPatient,
     setVitals,
@@ -320,6 +319,7 @@ export default function Dashboard() {
     notes: ''
   });
   const [medicationScheduleDraft, setMedicationScheduleDraft] = useState<SchedulePeriod[]>(['Morning']);
+  const isPrescriptionPdf = isPdfDocument(prescriptionFile);
 
   const adherence = useMemo(() => {
     const takenCount = medications.filter((medication) => medication.status === 'TAKEN').length;
@@ -334,7 +334,7 @@ export default function Dashboard() {
     [medications]
   );
 
-  const chartData = useMemo(() => chartDataForVitals(vitals.heartRate), [vitals.heartRate]);
+  const chartData = useMemo(() => getDashboardHeartRateTrend(vitals, logs), [logs, vitals]);
 
   const refreshWhatsAppStatus = async () => {
     setIsWhatsAppLoading(true);
@@ -367,6 +367,14 @@ export default function Dashboard() {
 
     return () => window.clearInterval(interval);
   }, [isWhatsAppModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (prescriptionPreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(prescriptionPreview);
+      }
+    };
+  }, [prescriptionPreview]);
 
   const handleAiSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -424,6 +432,12 @@ export default function Dashboard() {
 
   const handleScanPrescription = async () => {
     if (!prescriptionFile) {
+      return;
+    }
+
+    if (isPdfDocument(prescriptionFile)) {
+      setParsedPrescription([]);
+      setScanSummary('PDF preview is supported, but the AI scanner currently works best with JPG or PNG prescription images.');
       return;
     }
 
@@ -553,7 +567,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 pb-20">
       <div className="grid grid-cols-12 gap-6">
-        <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="col-span-12 lg:col-span-8 bg-surface-container-lowest border border-emerald-100 rounded-3xl p-8 shadow-sm">
+        <motion.section initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="col-span-12 lg:col-span-8 care-panel p-8">
           <div className="flex flex-col md:flex-row gap-6 justify-between">
             <div className="flex gap-5">
               <img src={patient.photo} alt={patient.name} className="w-28 h-28 rounded-3xl object-cover shadow-lg" referrerPolicy="no-referrer" />
@@ -578,7 +592,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-primary text-white rounded-3xl px-6 py-5 min-w-[250px] shadow-xl">
+            <div className="text-white rounded-3xl px-6 py-5 min-w-[250px] shadow-xl bg-gradient-to-br from-[#0a6f7f] to-[#1a8ca1]">
               <p className="text-xs font-black uppercase tracking-[0.25em] opacity-80">Today's adherence</p>
               <p className="text-5xl font-black mt-2">{adherence.percent}%</p>
               <p className="text-sm mt-3 opacity-85">{adherence.takenCount}/{medications.length || 1} doses completed</p>
@@ -592,7 +606,7 @@ export default function Dashboard() {
               { icon: Wind, label: 'Oxygen', value: `${vitals.oxygen}%`, color: 'text-sky-500' },
               { icon: Thermometer, label: 'Temperature', value: `${vitals.temp}°F`, color: 'text-orange-500' }
             ].map((item) => (
-              <div key={item.label} className="rounded-2xl bg-surface-container-low border border-surface-container-high p-4">
+              <div key={item.label} className="rounded-2xl bg-surface-container-low border border-surface-container-high p-4 shadow-sm">
                 <div className="flex items-center gap-2">
                   <item.icon className={cn('w-4 h-4', item.color)} />
                   <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{item.label}</span>
@@ -602,10 +616,10 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="mt-8 rounded-3xl bg-surface-container-low p-5 border border-surface-container-high">
+          <div className="mt-8 rounded-3xl bg-surface-container-low p-5 border border-surface-container-high shadow-inner">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black tracking-tight">Heart rate trend</h2>
-              <span className="text-xs font-black uppercase tracking-widest text-primary">Manual + live dashboard</span>
+              <span className="care-pill bg-primary/10 text-primary">Manual + live dashboard</span>
             </div>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -652,7 +666,7 @@ export default function Dashboard() {
         </motion.section>
 
         <div className="col-span-12 xl:col-span-4 space-y-6">
-          <section className="bg-surface-container-lowest border border-emerald-100 rounded-3xl p-7 shadow-sm">
+          <section className="care-panel p-7">
             <div className="flex items-center gap-3 mb-5">
               <div className="p-2 rounded-2xl bg-primary/10"><Sparkles className="w-5 h-5 text-primary" /></div>
               <div>
@@ -669,18 +683,24 @@ export default function Dashboard() {
             </form>
           </section>
 
-          <section className="bg-surface-container-lowest border border-emerald-100 rounded-3xl p-7 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
+          <section className="care-panel relative overflow-hidden border-2 border-primary/20 bg-gradient-to-br from-[#f5fffd] via-white to-[#e8f7fb] p-8 shadow-[0_24px_70px_-36px_rgba(12,106,118,0.55)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-primary/15 via-cyan-400/10 to-transparent" />
+            <div className="relative flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-black tracking-tight">Prescription Scan</h2>
-                <p className="text-xs text-secondary">Runs through backend OCR + AI parser</p>
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-primary">
+                  Main feature
+                </span>
+                <h2 className="mt-3 text-2xl font-black tracking-tight">Prescription Scanner</h2>
+                <p className="text-xs text-secondary mt-1">Highlighting the fastest path from uploaded prescription to structured medicines.</p>
               </div>
-              <Upload className="w-5 h-5 text-primary" />
+              <div className="rounded-2xl bg-white/85 p-3 shadow-sm ring-1 ring-primary/10">
+                <Upload className="w-6 h-6 text-primary" />
+              </div>
             </div>
-            <label className="block border-2 border-dashed border-primary/30 rounded-2xl p-6 text-center cursor-pointer bg-primary/5">
-              <p className="text-sm font-black">Upload prescription image</p>
-              <p className="text-xs text-secondary mt-2">PNG or JPG works best</p>
-              <input type="file" accept="image/*" className="hidden" onChange={(event) => {
+            <label className="relative block cursor-pointer rounded-[28px] border-2 border-dashed border-primary/35 bg-white/75 p-7 text-center shadow-sm transition hover:border-primary/50 hover:bg-white">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-on-surface">Upload prescription</p>
+              <p className="text-xs text-secondary mt-2">JPG and PNG scan best. PDFs now get a full preview too.</p>
+              <input type="file" accept="image/*,.pdf,application/pdf" className="hidden" onChange={(event) => {
                 const file = event.target.files?.[0] ?? null;
                 if (!file) return;
                 if (prescriptionPreview?.startsWith('blob:')) URL.revokeObjectURL(prescriptionPreview);
@@ -690,8 +710,37 @@ export default function Dashboard() {
                 setPrescriptionPreview(URL.createObjectURL(file));
               }} />
             </label>
-            {prescriptionPreview && <img src={prescriptionPreview} alt="Prescription preview" className="w-full h-40 object-cover rounded-2xl mt-4" />}
-            {prescriptionFile && <button onClick={handleScanPrescription} disabled={isScanning} className="w-full mt-4 py-3 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest disabled:opacity-60">{isScanning ? 'Scanning...' : 'Scan with backend AI'}</button>}
+            {prescriptionPreview && (
+              <div className="mt-5 overflow-hidden rounded-[28px] border border-primary/10 bg-white p-3 shadow-inner">
+                {isPrescriptionPdf ? (
+                  <iframe
+                    src={`${prescriptionPreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=page-fit`}
+                    title="Prescription PDF preview"
+                    className="h-[520px] w-full rounded-[22px] bg-white"
+                  />
+                ) : (
+                  <img
+                    src={prescriptionPreview}
+                    alt="Prescription preview"
+                    className="h-[520px] w-full rounded-[22px] bg-white object-contain"
+                  />
+                )}
+              </div>
+            )}
+            {prescriptionFile && (
+              <button
+                onClick={handleScanPrescription}
+                disabled={isScanning || isPrescriptionPdf}
+                className="w-full mt-5 py-4 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-[0.24em] disabled:opacity-60"
+              >
+                {isScanning ? 'Scanning...' : isPrescriptionPdf ? 'Convert PDF page to image to scan' : 'Scan with backend AI'}
+              </button>
+            )}
+            {isPrescriptionPdf && (
+              <p className="mt-3 text-xs font-medium text-secondary">
+                Full PDF preview is enabled here. For OCR scanning, upload the prescription as a JPG or PNG so the AI parser can read it reliably.
+              </p>
+            )}
             {scanSummary && <div className="rounded-2xl bg-surface-container-low border border-surface-container-high p-4 mt-4"><p className="text-sm text-secondary leading-relaxed">{scanSummary}</p></div>}
             {parsedPrescription.length > 0 && (
               <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 mt-4">
@@ -717,7 +766,7 @@ export default function Dashboard() {
             )}
           </section>
 
-          <section className="bg-surface-container-lowest border border-emerald-100 rounded-3xl p-7 shadow-sm">
+          <section className="care-panel p-7">
             <div className="flex justify-between items-start gap-4 mb-5">
               <div>
                 <h2 className="text-xl font-black tracking-tight">Caregiver Wellness</h2>
@@ -736,20 +785,20 @@ export default function Dashboard() {
             {burnoutInsight && <div className="rounded-2xl bg-surface-container-low border border-surface-container-high p-4 mt-5"><p className="text-xs font-black uppercase tracking-widest text-primary">Burnout level: {burnoutInsight.burnoutLevel}</p><p className="text-sm text-secondary mt-2 leading-relaxed">{burnoutInsight.suggestion}</p></div>}
           </section>
 
-          <section className="bg-surface-container-low border border-surface-container-high rounded-3xl p-7 shadow-inner">
+          <section className="rounded-3xl p-7 shadow-xl bg-gradient-to-br from-[#9f5f76] to-[#8a4b5d] text-white">
             <h2 className="text-xl font-black tracking-tight mb-5">Priority alerts</h2>
             <div className="space-y-3">
               {alerts.slice(0, 3).map((alert) => (
-                <div key={alert.id} className="rounded-2xl bg-white/70 border border-white p-4 flex justify-between gap-4">
+                <div key={alert.id} className="rounded-2xl bg-white/14 border border-white/20 p-4 flex justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">{alert.severity}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/80">{alert.severity}</p>
                     <p className="font-black mt-2">{alert.title}</p>
-                    <p className="text-sm text-secondary mt-1">{alert.desc}</p>
+                    <p className="text-sm text-white/80 mt-1">{alert.desc}</p>
                   </div>
-                  <button onClick={() => dismissAlert(alert.id)} className="text-[10px] font-black uppercase tracking-widest text-primary">Dismiss</button>
+                  <button onClick={() => dismissAlert(alert.id)} className="px-3 py-2 rounded-xl bg-white text-[#8a4b5d] text-[10px] font-black uppercase tracking-widest h-fit">Dismiss</button>
                 </div>
               ))}
-              {lowStockMedications.length > 0 && <p className="text-xs text-secondary">Low stock: {lowStockMedications.map((item) => item.name).join(', ')}</p>}
+              {lowStockMedications.length > 0 && <p className="text-xs text-white/80">Low stock: {lowStockMedications.map((item) => item.name).join(', ')}</p>}
             </div>
           </section>
         </div>

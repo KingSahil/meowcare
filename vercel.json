@@ -1,0 +1,17 @@
+{
+  "experimentalServices": {
+    "frontend": {
+      "entrypoint": "frontend",
+      "routePrefix": "/",
+      "framework": "vite"
+    },
+    "backend": {
+      "entrypoint": "backend/server.ts",
+      "routePrefix": "/_/backend"
+    },
+    "ai-module": {
+      "entrypoint": "ai-module/index.js",
+      "routePrefix": "/_/ai"
+    }
+  }
+}

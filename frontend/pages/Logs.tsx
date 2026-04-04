@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
   Activity,
+  ArrowDownToLine,
+  CircleDot,
   Download,
   Heart,
   Pill,
@@ -12,6 +14,7 @@ import { motion } from 'motion/react';
 import { useCare } from '../context/CareContext';
 import { generatePDF } from '../lib/pdfGenerator';
 import { cn } from '../lib/utils';
+import { getWeeklyHeartRateTrend } from '../lib/vitalsChart';
 
 export default function Logs() {
   const { logs, vitals, medications, patient } = useCare();
@@ -32,16 +35,21 @@ export default function Logs() {
   );
 
   const chartData = useMemo(
-    () => [
-      { date: 'Mon', hr: Math.max(vitals.heartRate - 3, 60), oxygen: vitals.oxygen - 0.2 },
-      { date: 'Tue', hr: Math.max(vitals.heartRate - 1, 60), oxygen: vitals.oxygen },
-      { date: 'Wed', hr: vitals.heartRate + 4, oxygen: vitals.oxygen - 0.3 },
-      { date: 'Thu', hr: vitals.heartRate, oxygen: vitals.oxygen },
-      { date: 'Fri', hr: Math.max(vitals.heartRate - 2, 60), oxygen: vitals.oxygen + 0.1 },
-      { date: 'Sat', hr: vitals.heartRate + 1, oxygen: vitals.oxygen },
-      { date: 'Sun', hr: vitals.heartRate, oxygen: vitals.oxygen + 0.2 }
-    ],
-    [vitals]
+    () => getWeeklyHeartRateTrend(vitals, logs),
+    [logs, vitals]
+  );
+
+  const vitalsTrendData = useMemo(
+    () =>
+      chartData.map((entry) => {
+        const hr = Number(entry.hr ?? vitals.heartRate);
+        return {
+          ...entry,
+          hr,
+          bp: Number((hr + 46).toFixed(0))
+        };
+      }),
+    [chartData, vitals.heartRate]
   );
 
   const takenCount = medications.filter((medication) => medication.status === 'TAKEN').length;
@@ -70,39 +78,47 @@ export default function Logs() {
           <h1 className="text-4xl font-black tracking-tight">Health Analytics</h1>
           <p className="text-secondary font-medium mt-2">Live dashboard trends and the latest backend-synced activity logs.</p>
         </div>
-        <button onClick={exportPdf} className="bg-on-surface text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2">
+        <button onClick={exportPdf} className="care-btn bg-on-surface text-white flex items-center gap-2">
           <Download className="w-4 h-4" />
           Export PDF
         </button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 bg-surface-container-lowest rounded-3xl p-8 border border-emerald-100 shadow-sm">
+        <div className="lg:col-span-8 care-panel p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-black">Vital Trends</h2>
-            <span className="text-xs font-black uppercase tracking-widest text-primary">7-day pulse snapshot</span>
+            <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.14em] text-secondary">
+              <span className="flex items-center gap-2"><CircleDot className="w-3.5 h-3.5 text-[#0a6f7f] fill-[#0a6f7f]" />Heart Rate</span>
+              <span className="flex items-center gap-2"><CircleDot className="w-3.5 h-3.5 text-[#3f86db] fill-[#3f86db]" />Blood Pressure</span>
+            </div>
           </div>
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={vitalsTrendData}>
                 <defs>
                   <linearGradient id="logsHr" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0c6a76" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#0c6a76" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#0a6f7f" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#0a6f7f" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="logsBp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3f86db" stopOpacity={0.26} />
+                    <stop offset="100%" stopColor="#3f86db" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#d7e3ea" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#d6e2e8" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="hr" stroke="#0c6a76" strokeWidth={4} fill="url(#logsHr)" />
+                <Area type="monotone" dataKey="bp" stroke="#3f86db" strokeWidth={4} fill="url(#logsBp)" />
+                <Area type="monotone" dataKey="hr" stroke="#0a6f7f" strokeWidth={4} fill="url(#logsHr)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-primary text-white rounded-3xl p-8 shadow-xl">
+          <div className="rounded-3xl p-8 shadow-xl text-white bg-gradient-to-br from-[#0a6f7f] via-[#09707d] to-[#1687a3]">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Medication Adherence</p>
             <p className="text-5xl font-black mt-3">{adherence}%</p>
             <p className="text-sm mt-4 opacity-80">{takenCount}/{medications.length || 1} doses completed today.</p>
@@ -113,7 +129,7 @@ export default function Logs() {
             { icon: Activity, label: 'Current Blood Pressure', value: vitals.bloodPressure, color: 'text-primary' },
             { icon: TrendingUp, label: 'Logged Events', value: String(logs.length), color: 'text-sky-500' }
           ].map((item) => (
-            <div key={item.label} className="bg-surface-container-low rounded-3xl p-6 border border-surface-container-high">
+            <div key={item.label} className="care-panel-muted p-6 border border-surface-container-high">
               <div className="flex items-center gap-3">
                 <div className={cn('p-3 rounded-2xl bg-white', item.color)}>
                   <item.icon className="w-5 h-5" />
@@ -128,7 +144,7 @@ export default function Logs() {
         </div>
       </div>
 
-      <div className="bg-surface-container-lowest border border-emerald-100 rounded-3xl shadow-sm overflow-hidden">
+      <div className="care-panel overflow-hidden">
         <div className="p-8 border-b border-surface-container-high flex flex-col md:flex-row justify-between gap-4">
           <h2 className="text-xl font-black">Activity Logs</h2>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -138,7 +154,7 @@ export default function Logs() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search logs"
-                className="pl-11 pr-4 py-3 rounded-2xl bg-surface-container-low text-sm font-bold"
+                className="pl-11 pr-4 py-3 rounded-2xl bg-surface-container-low text-sm font-bold min-w-[220px]"
               />
             </div>
             <select
@@ -164,6 +180,7 @@ export default function Logs() {
                 <th className="px-8 py-4">Time & Date</th>
                 <th className="px-8 py-4">Status</th>
                 <th className="px-8 py-4">Notes</th>
+                <th className="px-8 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-high">
@@ -194,6 +211,11 @@ export default function Logs() {
                     </span>
                   </td>
                   <td className="px-8 py-5 text-sm text-secondary">{log.note}</td>
+                  <td className="px-8 py-5 text-right">
+                    <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-surface-container-low text-secondary hover:bg-surface-container transition-colors" title="Export row">
+                      <ArrowDownToLine className="w-4 h-4" />
+                    </button>
+                  </td>
                 </motion.tr>
               ))}
             </tbody>

@@ -35,7 +35,7 @@ const registerShutdownHooks = () => {
   process.on('beforeExit', closeSocketServer);
 };
 
-export const initializeSocketServer = (port = Number(Bun.env.SOCKET_PORT ?? 3001)) => {
+export const initializeSocketServer = (port = Number(process.env.SOCKET_PORT ?? 3001)) => {
   registerShutdownHooks();
 
   if (io) {
