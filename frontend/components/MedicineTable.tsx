@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 export type MedicationStatus = 'MISSED' | 'TAKEN' | 'PENDING';
 
 export type Medication = {
-  id: number;
+  id: string | number;
   name: string;
   dose: string;
   time: string;
@@ -19,9 +19,16 @@ type MedicineTableProps = {
   onAddMedicine: () => void;
   onEditMedicine: (medication: Medication) => void;
   onRefillNow: (medication: Medication) => void;
+  onStatusChange?: (medication: Medication, status: MedicationStatus | 'LATER') => void;
 };
 
-export default function MedicineTable({ medications, onAddMedicine, onEditMedicine, onRefillNow }: MedicineTableProps) {
+export default function MedicineTable({
+  medications,
+  onAddMedicine,
+  onEditMedicine,
+  onRefillNow,
+  onStatusChange
+}: MedicineTableProps) {
   return (
     <div className="bg-surface-container-lowest border border-emerald-100 rounded-2xl p-8 shadow-sm">
       <div className="flex justify-between items-center mb-8">
@@ -77,6 +84,28 @@ export default function MedicineTable({ medications, onAddMedicine, onEditMedici
                   </td>
                   <td className="py-5">
                     <div className="flex justify-end gap-2">
+                      {onStatusChange && (
+                        <>
+                          <button
+                            onClick={() => onStatusChange(med, 'TAKEN')}
+                            className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/15"
+                          >
+                            Taken
+                          </button>
+                          <button
+                            onClick={() => onStatusChange(med, 'LATER')}
+                            className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-secondary-container/70 text-secondary hover:bg-secondary-container"
+                          >
+                            Later
+                          </button>
+                          <button
+                            onClick={() => onStatusChange(med, 'MISSED')}
+                            className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-tertiary/10 text-tertiary hover:bg-tertiary/15"
+                          >
+                            Skip
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => onEditMedicine(med)}
                         className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-surface-container-low border border-surface-variant/30 hover:bg-surface-container"

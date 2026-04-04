@@ -1,190 +1,133 @@
-import React, { useState } from 'react';
-import { 
-  BadgeCheck, 
-  Camera, 
-  Lock, 
-  Shield, 
-  ChevronRight, 
-  Users, 
-  Phone,
+import React from 'react';
+import {
+  BadgeCheck,
+  Download,
+  Lock,
   Mail,
   MapPin,
-  Contact,
-  AlertTriangle,
-  Download
+  Phone,
+  Shield,
+  Wifi
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
+import { useCare } from '../context/CareContext';
+import { frontendConfig } from '../lib/api';
 import { generatePDF } from '../lib/pdfGenerator';
 
 export default function Settings() {
-  const [notifications, setNotifications] = useState([
-    { id: 1, label: 'Critical Vitals', desc: 'Immediate push & SMS', enabled: true },
-    { id: 2, label: 'Medication Logs', desc: 'Daily summary email', enabled: true },
-    { id: 3, label: 'System Alerts', desc: 'App notification only', enabled: false },
-    { id: 4, label: 'Refill Reminders', desc: '48h before stock out', enabled: true },
-  ]);
+  const { notifications, toggleNotification, patient, backendStatus } = useCare();
 
-  const toggleNotification = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, enabled: !n.enabled } : n));
-  };
-
-  const handleDownloadProfile = () => {
+  const exportProfile = () => {
     generatePDF(
-      'Staff Profile Data Export',
+      'Caregiver_Profile_Export',
       [
-        'Staff Name: Dr. Rhoit Dsouza',
-        'Role: Senior Care Coordinator',
-        'Specialty: Internal Medicine',
-        'Staff ID: HC-IN-8829',
-        'Email: dr.rhen@healtcare.org',
-        'Phone: +91 98765 43210',
-        'Work Location: Mumbai Region - Unit B',
+        `Patient profile currently attached: ${patient.name}`,
+        `Backend online: ${backendStatus.online ? 'Yes' : 'No'}`,
+        `Backend mode: ${backendStatus.mode}`,
+        `Backend note: ${backendStatus.note}`,
         '',
-        'Notification Settings:',
-        ...notifications.map(n => `- ${n.label}: ${n.enabled ? 'Enabled' : 'Disabled'} (${n.desc})`),
+        ...notifications.map(
+          (notification) =>
+            `${notification.label}: ${notification.enabled ? 'Enabled' : 'Disabled'} (${notification.desc})`
+        ),
         '',
-        'Assigned Patients: 12',
-        '',
-        'This document contains sensitive staff information.',
-        'Generated on: ' + new Date().toLocaleString()
+        `API Base URL: ${frontendConfig.apiBaseUrl}`,
+        `Socket URL: ${frontendConfig.socketUrl}`,
+        `WhatsApp URL: ${frontendConfig.whatsappBaseUrl}`
       ],
-      'Staff_Profile_Export'
+      'Caregiver_Profile_Export'
     );
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
+    <div className="max-w-5xl mx-auto space-y-10 pb-20">
       <header>
-        <h1 className="text-3xl font-extrabold text-on-surface tracking-tight mb-2">Settings</h1>
-        <p className="text-secondary">Manage your professional profile and system preferences.</p>
+        <h1 className="text-4xl font-black tracking-tight">Settings</h1>
+        <p className="text-secondary font-medium mt-2">
+          Frontend runtime status, notification preferences, and integration endpoints.
+        </p>
       </header>
 
-      {/* Profile Section */}
-      <section className="bg-surface-container-lowest p-8 rounded-xl shadow-sm">
-        <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
-              <img 
-                className="w-full h-full object-cover" 
-                src="https://cdn.pixabay.com/photo/2017/05/23/17/12/doctor-2337835_1280.jpg" 
-                alt="Doctor"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <button className="absolute bottom-0 right-0 p-2 bg-primary text-on-primary rounded-full shadow-lg hover:scale-110 transition-transform">
-              <Camera className="w-4 h-4" />
-            </button>
+      <section className="bg-surface-container-lowest rounded-3xl p-8 shadow-sm border border-emerald-100">
+        <div className="flex flex-col md:flex-row items-center gap-8">
+          <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg">
+            <img
+              src="https://cdn.pixabay.com/photo/2017/05/23/17/12/doctor-2337835_1280.jpg"
+              alt="Coordinator"
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <div className="text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
-              <h2 className="text-2xl font-bold text-on-surface">Dr. Rhen Dsouza</h2>
+          <div className="flex-1 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-2">
+              <h2 className="text-3xl font-black">Dr. Rhen Dsouza</h2>
               <BadgeCheck className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-secondary font-medium mb-4">Senior Care Coordinator • Staff ID: HC-IN-8829</p>
-            <button 
-              onClick={handleDownloadProfile}
-              className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface text-sm font-bold rounded-lg hover:bg-surface-container-high transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export Profile Data
-            </button>
+            <p className="text-secondary mt-2">Senior Care Coordinator • Shared caregiver console</p>
           </div>
+          <button
+            onClick={exportProfile}
+            className="px-5 py-3 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-widest flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export Settings
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
-              <Contact className="w-4 h-4" />
-              Contact Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg">
-                <Mail className="w-4 h-4 text-primary" />
-                <span className="text-sm">dr.rhen@healtcare.org</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+          {[
+            { icon: Mail, label: 'Contact', value: 'dr.rhen@healthcare.org' },
+            { icon: Phone, label: 'Phone', value: '+91 98765 43210' },
+            { icon: MapPin, label: 'Region', value: 'Mumbai Region - Unit B' }
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl bg-surface-container-low p-5 border border-surface-container-high">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <item.icon className="w-5 h-5" />
               </div>
-              <div className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg">
-                <Phone className="w-4 h-4 text-primary" />
-                <span className="text-sm">+91 98765 43210</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm">Mumbai Region - Unit B</span>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Assigned Circle
-            </h3>
-            <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg">
-              <p className="text-2xl font-bold text-primary mb-1">12 Patients</p>
-              <p className="text-xs text-secondary">Active monitoring enabled for all assigned profiles.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Notifications Section */}
-      <section className="space-y-6">
-        <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-          <Shield className="w-5 h-5 text-primary" />
-          Notification Preferences
-        </h2>
-        <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm divide-y divide-outline-variant/10">
-          {notifications.map((pref) => (
-            <div key={pref.id} className="p-6 flex items-center justify-between hover:bg-surface-container-low transition-colors">
-              <div>
-                <p className="font-bold text-on-surface mb-1">{pref.label}</p>
-                <p className="text-xs text-secondary">{pref.desc}</p>
-              </div>
-              <button 
-                onClick={() => toggleNotification(pref.id)}
-                className={cn(
-                  "w-12 h-6 rounded-full relative transition-all duration-300",
-                  pref.enabled ? "bg-primary" : "bg-outline-variant"
-                )}
-              >
-                <div className={cn(
-                  "absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300",
-                  pref.enabled ? "right-1" : "left-1"
-                )}></div>
-              </button>
+              <p className="text-[10px] font-black uppercase tracking-widest text-secondary mt-4">{item.label}</p>
+              <p className="font-black mt-2">{item.value}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Security Section */}
-      <section className="space-y-6">
-        <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-          <Lock className="w-5 h-5 text-primary" />
-          Security & Privacy
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button className="flex items-center justify-between p-6 bg-surface-container-lowest rounded-xl shadow-sm hover:bg-surface-container-low transition-all group">
-            <div className="text-left">
-              <p className="font-bold text-on-surface mb-1">Change Password</p>
-              <p className="text-xs text-secondary">Last changed 3 months ago</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-outline group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button className="flex items-center justify-between p-6 bg-surface-container-lowest rounded-xl shadow-sm hover:bg-surface-container-low transition-all group">
-            <div className="text-left">
-              <p className="font-bold text-on-surface mb-1">Two-Factor Auth</p>
-              <p className="text-xs text-secondary">Currently enabled via SMS</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-outline group-hover:translate-x-1 transition-transform" />
-          </button>
+      <section className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-emerald-100">
+        <div className="p-8 border-b border-surface-container-high">
+          <h2 className="text-xl font-black flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Notification Preferences
+          </h2>
         </div>
-        <div className="bg-tertiary-container/10 p-6 rounded-xl flex items-start gap-4">
-          <AlertTriangle className="w-6 h-6 text-tertiary shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-on-tertiary-fixed-variant mb-1">Data Privacy Notice</p>
-            <p className="text-xs text-secondary leading-relaxed">Your account is compliant with HIPAA standards. All patient data is encrypted end-to-end and access is logged for audit purposes.</p>
+        {notifications.map((notification) => (
+          <div key={notification.id} className="p-6 flex items-center justify-between border-t border-surface-container-high">
+            <div>
+              <p className="font-black">{notification.label}</p>
+              <p className="text-sm text-secondary mt-1">{notification.desc}</p>
+            </div>
+            <button
+              onClick={() => toggleNotification(notification.id)}
+              className={`w-14 h-8 rounded-full relative ${notification.enabled ? 'bg-primary' : 'bg-surface-container-high'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${notification.enabled ? 'right-1' : 'left-1'}`} />
+            </button>
           </div>
-        </div>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { icon: Wifi, label: 'Backend API', value: `${backendStatus.online ? 'Online' : 'Offline'} • ${frontendConfig.apiBaseUrl}` },
+          { icon: Wifi, label: 'Socket Server', value: frontendConfig.socketUrl },
+          { icon: Lock, label: 'WhatsApp Bridge', value: frontendConfig.whatsappBaseUrl }
+        ].map((item) => (
+          <div key={item.label} className="rounded-3xl bg-surface-container-low p-6 border border-surface-container-high">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+              <item.icon className="w-5 h-5" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-secondary mt-4">{item.label}</p>
+            <p className="font-black mt-2 break-all">{item.value}</p>
+            {item.label === 'Backend API' && <p className="text-sm text-secondary mt-3">{backendStatus.note}</p>}
+          </div>
+        ))}
       </section>
     </div>
   );

@@ -1,346 +1,207 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  FileText, 
-  Calendar, 
-  Clock, 
-  Activity, 
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+import React, { useMemo, useState } from 'react';
+import {
+  Activity,
+  Download,
   Heart,
-  Moon,
-  Pill
+  Pill,
+  Search,
+  TrendingUp
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar
-} from 'recharts';
-import { cn } from '../lib/utils';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { motion } from 'motion/react';
+import { useCare } from '../context/CareContext';
 import { generatePDF } from '../lib/pdfGenerator';
-
-const historicalData = [
-  { date: 'Oct 24', hr: 72, bp: 118, o2: 98 },
-  { date: 'Oct 25', hr: 75, bp: 120, o2: 97 },
-  { date: 'Oct 26', hr: 98, bp: 142, o2: 96 }, // Spike
-  { date: 'Oct 27', hr: 82, bp: 125, o2: 98 },
-  { date: 'Oct 28', hr: 74, bp: 119, o2: 99 },
-  { date: 'Oct 29', hr: 71, bp: 117, o2: 98 },
-  { date: 'Oct 30', hr: 73, bp: 118, o2: 98 },
-];
-
-const logsData = [
-  { id: 1, type: 'Vital Check', time: '09:12 AM', date: 'Oct 30', value: '73 bpm', status: 'Normal', note: 'Resting heart rate stable.', trend: 'stable' },
-  { id: 2, type: 'Medication', time: '08:00 AM', date: 'Oct 30', value: 'Metformin', status: 'Taken', note: 'Administered with breakfast.', trend: 'none' },
-  { id: 3, type: 'Vital Check', time: '09:12 AM', date: 'Oct 26', value: '98 bpm', status: 'Elevated', note: 'Patient reported mild anxiety.', trend: 'up' },
-  { id: 4, type: 'Medication', time: '08:00 AM', date: 'Oct 26', value: 'Metformin', status: 'Missed', note: 'Caregiver was delayed.', trend: 'none' },
-  { id: 5, type: 'Vital Check', time: '04:30 PM', date: 'Oct 25', value: '120/80', status: 'Normal', note: 'Blood pressure check.', trend: 'down' },
-];
+import { cn } from '../lib/utils';
 
 export default function Logs() {
+  const { logs, vitals, medications, patient } = useCare();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('All');
-  const [timeRange, setTimeRange] = useState('7D');
 
-  const filteredLogs = useMemo(() => {
-    return logsData.filter(log => {
-      const matchesSearch = log.type.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           log.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           log.note.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filterType === 'All' || log.type === filterType;
-      return matchesSearch && matchesFilter;
-    });
-  }, [searchQuery, filterType]);
+  const filteredLogs = useMemo(
+    () =>
+      logs.filter((log) => {
+        const matchesSearch = [log.type, log.value, log.note, log.status]
+          .join(' ')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesFilter = filterType === 'All' || log.type === filterType;
+        return matchesSearch && matchesFilter;
+      }),
+    [filterType, logs, searchQuery]
+  );
 
-  const handleExportPDF = () => {
-    const reportData = [
-      'Longitudinal Health Report: Ramen Disuza',
-      `Date Range: ${timeRange}`,
-      '',
-      'Summary Statistics:',
-      '- Avg Heart Rate: 78 bpm',
-      '- Avg Blood Pressure: 121/82 mmHg',
-      '- Medication Adherence: 94%',
-      '',
-      'Recent Logs:',
-      ...filteredLogs.map(log => `${log.date} ${log.time} - ${log.type}: ${log.value} (${log.status})`)
-    ];
-    generatePDF('Health_Logs_Report', reportData, 'Health_Logs_Report');
-  };
+  const chartData = useMemo(
+    () => [
+      { date: 'Mon', hr: Math.max(vitals.heartRate - 3, 60), oxygen: vitals.oxygen - 0.2 },
+      { date: 'Tue', hr: Math.max(vitals.heartRate - 1, 60), oxygen: vitals.oxygen },
+      { date: 'Wed', hr: vitals.heartRate + 4, oxygen: vitals.oxygen - 0.3 },
+      { date: 'Thu', hr: vitals.heartRate, oxygen: vitals.oxygen },
+      { date: 'Fri', hr: Math.max(vitals.heartRate - 2, 60), oxygen: vitals.oxygen + 0.1 },
+      { date: 'Sat', hr: vitals.heartRate + 1, oxygen: vitals.oxygen },
+      { date: 'Sun', hr: vitals.heartRate, oxygen: vitals.oxygen + 0.2 }
+    ],
+    [vitals]
+  );
 
-  const handleDownloadLog = (log: any) => {
+  const takenCount = medications.filter((medication) => medication.status === 'TAKEN').length;
+  const adherence = Math.round((takenCount / Math.max(medications.length, 1)) * 100);
+
+  const exportPdf = () => {
     generatePDF(
-      `Log_Entry_${log.id}`,
+      'Health_Logs_Report',
       [
-        `Log ID: #${log.id}`,
-        `Type: ${log.type}`,
-        `Date: ${log.date}`,
-        `Time: ${log.time}`,
-        `Value: ${log.value}`,
-        `Status: ${log.status}`,
-        `Notes: ${log.note}`,
+        `Patient: ${patient.name}`,
+        `Latest heart rate: ${vitals.heartRate} bpm`,
+        `Latest blood pressure: ${vitals.bloodPressure}`,
+        `Latest oxygen: ${vitals.oxygen}%`,
+        `Medication adherence: ${adherence}%`,
         '',
-        'Generated by Remote Care Companion'
+        ...filteredLogs.map((log) => `${log.date} ${log.time} - ${log.type}: ${log.value} (${log.status}) - ${log.note}`)
       ],
-      `Log_${log.id}`
+      'Health_Logs_Report'
     );
   };
 
   return (
     <div className="space-y-10 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <header className="flex flex-col md:flex-row justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-on-surface tracking-tight mb-2">Health Analytics</h1>
-          <p className="text-secondary font-medium">Deep-dive into Ramen's longitudinal health data and activity logs.</p>
+          <h1 className="text-4xl font-black tracking-tight">Health Analytics</h1>
+          <p className="text-secondary font-medium mt-2">Live dashboard trends and the latest backend-synced activity logs.</p>
         </div>
-        <div className="flex gap-3">
-          <div className="flex bg-surface-container-low p-1 rounded-xl border border-outline-variant/10">
-            {['24H', '7D', '30D', 'ALL'].map((range) => (
-              <button 
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all",
-                  timeRange === range ? "bg-primary text-on-primary shadow-md" : "text-secondary hover:text-on-surface"
-                )}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-          <button 
-            onClick={handleExportPDF}
-            className="bg-on-surface text-surface px-6 py-3 rounded-xl font-black flex items-center gap-2 shadow-lg hover:scale-105 transition-transform active:scale-95"
-          >
-            <Download className="w-4 h-4" /> EXPORT PDF
-          </button>
-        </div>
+        <button onClick={exportPdf} className="bg-on-surface text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2">
+          <Download className="w-4 h-4" />
+          Export PDF
+        </button>
       </header>
 
-      {/* Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/10 shadow-sm">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-black text-on-surface tracking-tight">Vital Trends</h3>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span className="text-[10px] font-black text-secondary uppercase">Heart Rate</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-[10px] font-black text-secondary uppercase">Blood Pressure</span>
-              </div>
-            </div>
+        <div className="lg:col-span-8 bg-surface-container-lowest rounded-3xl p-8 border border-emerald-100 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black">Vital Trends</h2>
+            <span className="text-xs font-black uppercase tracking-widest text-primary">7-day pulse snapshot</span>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={historicalData}>
+              <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="colorHr" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#006d4e" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#006d4e" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorBp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <linearGradient id="logsHr" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0c6a76" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#0c6a76" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 800, fill: '#999' }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 800, fill: '#999' }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: 'none', 
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                    fontWeight: 900
-                  }} 
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="hr" 
-                  stroke="#006d4e" 
-                  strokeWidth={4}
-                  fillOpacity={1} 
-                  fill="url(#colorHr)" 
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="bp" 
-                  stroke="#3b82f6" 
-                  strokeWidth={4}
-                  fillOpacity={1} 
-                  fill="url(#colorBp)" 
-                />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#d7e3ea" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Area type="monotone" dataKey="hr" stroke="#0c6a76" strokeWidth={4} fill="url(#logsHr)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-primary text-on-primary p-8 rounded-2xl shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <TrendingUp className="w-24 h-24" />
-            </div>
-            <h4 className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-80">Weekly Adherence</h4>
-            <p className="text-5xl font-black mb-4">94.2%</p>
-            <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden mb-4">
-              <div className="bg-white h-full rounded-full" style={{ width: '94.2%' }}></div>
-            </div>
-            <p className="text-xs font-medium opacity-80 leading-relaxed">
-              Ramen has missed only 2 doses in the last 30 days. This is an improvement of 4% from last month.
-            </p>
+          <div className="bg-primary text-white rounded-3xl p-8 shadow-xl">
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Medication Adherence</p>
+            <p className="text-5xl font-black mt-3">{adherence}%</p>
+            <p className="text-sm mt-4 opacity-80">{takenCount}/{medications.length || 1} doses completed today.</p>
           </div>
 
-          <div className="bg-surface-container-low p-8 rounded-2xl border border-outline-variant/10">
-            <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 text-secondary">Quick Stats</h4>
-            <div className="space-y-6">
-              {[
-                { label: 'Avg Heart Rate', value: '78 bpm', trend: 'stable', icon: Heart, color: 'text-tertiary' },
-                { label: 'Avg BP', value: '121/82', trend: 'down', icon: Activity, color: 'text-primary' },
-                { label: 'Sleep Quality', value: '88%', trend: 'up', icon: Moon, color: 'text-blue-500' },
-              ].map((stat, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-xl bg-white shadow-sm", stat.color)}>
-                      <stat.icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-secondary uppercase tracking-widest">{stat.label}</p>
-                      <p className="text-lg font-black">{stat.value}</p>
-                    </div>
-                  </div>
-                  {stat.trend === 'up' && <ArrowUpRight className="w-5 h-5 text-primary" />}
-                  {stat.trend === 'down' && <ArrowDownRight className="w-5 h-5 text-tertiary" />}
-                  {stat.trend === 'stable' && <Minus className="w-5 h-5 text-secondary" />}
+          {[
+            { icon: Heart, label: 'Current Heart Rate', value: `${vitals.heartRate} bpm`, color: 'text-rose-500' },
+            { icon: Activity, label: 'Current Blood Pressure', value: vitals.bloodPressure, color: 'text-primary' },
+            { icon: TrendingUp, label: 'Logged Events', value: String(logs.length), color: 'text-sky-500' }
+          ].map((item) => (
+            <div key={item.label} className="bg-surface-container-low rounded-3xl p-6 border border-surface-container-high">
+              <div className="flex items-center gap-3">
+                <div className={cn('p-3 rounded-2xl bg-white', item.color)}>
+                  <item.icon className="w-5 h-5" />
                 </div>
-              ))}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-secondary">{item.label}</p>
+                  <p className="text-2xl font-black mt-2">{item.value}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Logs Table Section */}
-      <div className="bg-surface-container-lowest border border-outline-variant/10 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-outline-variant/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <h3 className="text-xl font-black text-on-surface tracking-tight">Activity Logs</h3>
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+      <div className="bg-surface-container-lowest border border-emerald-100 rounded-3xl shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-surface-container-high flex flex-col md:flex-row justify-between gap-4">
+          <h2 className="text-xl font-black">Activity Logs</h2>
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
-              <input 
-                type="text" 
-                placeholder="Search logs..." 
-                className="pl-11 pr-6 py-3 bg-surface-container-low border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary w-full sm:w-64"
+              <Search className="w-4 h-4 text-secondary absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search logs"
+                className="pl-11 pr-4 py-3 rounded-2xl bg-surface-container-low text-sm font-bold"
               />
             </div>
-            <select 
-              className="px-6 py-3 bg-surface-container-low border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary cursor-pointer"
+            <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(event) => setFilterType(event.target.value)}
+              className="px-4 py-3 rounded-2xl bg-surface-container-low text-sm font-bold"
             >
               <option value="All">All Types</option>
-              <option value="Vital Check">Vital Checks</option>
+              <option value="Vital Check">Vital Check</option>
               <option value="Medication">Medication</option>
+              <option value="Alert">Alert</option>
+              <option value="System">System</option>
             </select>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] text-secondary uppercase tracking-widest font-black bg-surface-container-low/30">
-                <th className="px-8 py-5">Type</th>
-                <th className="px-8 py-5">Value</th>
-                <th className="px-8 py-5">Time & Date</th>
-                <th className="px-8 py-5">Status</th>
-                <th className="px-8 py-5">Notes</th>
-                <th className="px-8 py-5 text-right">Action</th>
+              <tr className="text-[10px] uppercase tracking-widest text-secondary font-black bg-surface-container-low/30">
+                <th className="px-8 py-4">Type</th>
+                <th className="px-8 py-4">Value</th>
+                <th className="px-8 py-4">Time & Date</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4">Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/10">
-              <AnimatePresence mode="popLayout">
-                {filteredLogs.map((log) => (
-                  <motion.tr 
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    key={log.id} 
-                    className="group hover:bg-surface-container-low/50 transition-colors"
-                  >
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-2 rounded-lg",
-                          log.type === 'Vital Check' ? "bg-primary/10 text-primary" : "bg-blue-100 text-blue-600"
-                        )}>
-                          {log.type === 'Vital Check' ? <Activity className="w-4 h-4" /> : <Pill className="w-4 h-4" />}
-                        </div>
-                        <span className="font-black text-sm">{log.type}</span>
+            <tbody className="divide-y divide-surface-container-high">
+              {filteredLogs.map((log, index) => (
+                <motion.tr
+                  key={log.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.02 }}
+                  className="hover:bg-surface-container-low/50"
+                >
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        {log.type === 'Medication' ? <Pill className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
                       </div>
-                    </td>
-                    <td className="px-8 py-6 font-black text-sm">{log.value}</td>
-                    <td className="px-8 py-6">
-                      <p className="text-sm font-bold">{log.time}</p>
-                      <p className="text-[10px] text-secondary font-medium">{log.date}</p>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase",
-                        log.status === 'Normal' || log.status === 'Taken' ? "bg-primary/10 text-primary" : "bg-tertiary/10 text-tertiary"
-                      )}>
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6 text-sm text-secondary font-medium max-w-xs truncate">{log.note}</td>
-                    <td className="px-8 py-6 text-right">
-                      <button 
-                        onClick={() => handleDownloadLog(log)}
-                        className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
+                      <span className="font-black">{log.type}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 font-bold">{log.value}</td>
+                  <td className="px-8 py-5">
+                    <p className="font-bold">{log.time}</p>
+                    <p className="text-[10px] font-medium text-secondary">{log.date}</p>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">
+                      {log.status}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-sm text-secondary">{log.note}</td>
+                </motion.tr>
+              ))}
             </tbody>
           </table>
         </div>
-        
+
         {filteredLogs.length === 0 && (
-          <div className="py-20 text-center">
-            <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-outline" />
-            </div>
-            <p className="text-secondary font-bold">No logs found matching your criteria.</p>
-          </div>
+          <div className="p-16 text-center text-secondary">No logs match your current filters.</div>
         )}
       </div>
     </div>

@@ -19,6 +19,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useCare } from '../context/CareContext';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -30,7 +31,24 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { backendStatus, sendSos } = useCare();
   const [isEmergency, setIsEmergency] = useState(false);
+  const [sosError, setSosError] = useState<string | null>(null);
+
+  const handleSos = async () => {
+    setSosError(null);
+    setIsEmergency(true);
+
+    try {
+      await sendSos('Emergency SOS triggered from the caregiver dashboard.');
+    } catch (error) {
+      setSosError(error instanceof Error ? error.message : 'Unable to trigger SOS');
+      setIsEmergency(false);
+      return;
+    }
+
+    window.setTimeout(() => setIsEmergency(false), 1800);
+  };
 
   return (
     <aside className="hidden lg:flex flex-col w-72 bg-surface border-r border-outline/20 h-screen sticky top-0 pt-24 px-6 pb-8">
@@ -75,8 +93,10 @@ export function Sidebar() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Care Status</span>
             <div className="flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-              <span className="text-[10px] font-black text-primary uppercase">Manual</span>
+              <div className={cn("w-1.5 h-1.5 rounded-full", backendStatus.online ? "bg-primary animate-pulse" : "bg-tertiary")}></div>
+              <span className={cn("text-[10px] font-black uppercase", backendStatus.online ? "text-primary" : "text-tertiary")}>
+                {backendStatus.online ? backendStatus.mode : 'offline'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -85,13 +105,13 @@ export function Sidebar() {
             </div>
             <div>
               <p className="text-[10px] font-black text-on-surface">Home Log Active</p>
-              <p className="text-[9px] font-medium text-secondary">Updated by caregiver entries</p>
+              <p className="text-[9px] font-medium text-secondary">{backendStatus.note}</p>
             </div>
           </div>
         </div>
 
         <button 
-          onClick={() => setIsEmergency(!isEmergency)}
+          onClick={() => void handleSos()}
           className={cn(
             "w-full py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 uppercase tracking-widest text-xs",
             isEmergency 
@@ -100,8 +120,9 @@ export function Sidebar() {
           )}
         >
           <AlertTriangle className={cn("w-5 h-5", isEmergency ? "animate-pulse" : "fill-white/20")} />
-          {isEmergency ? "CANCEL SOS" : "EMERGENCY SOS"}
+          {isEmergency ? "SOS SENT" : "EMERGENCY SOS"}
         </button>
+        {sosError && <p className="text-[10px] font-bold text-tertiary">{sosError}</p>}
       </div>
     </aside>
   );

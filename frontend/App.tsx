@@ -8,6 +8,7 @@ import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
 import Landing from './pages/Landing';
 import WhatsAppGuardian from './pages/WhatsAppGuardian';
+import PairDevice from './pages/PairDevice';
 
 function AppContent() {
   const location = useLocation();
@@ -33,6 +34,7 @@ function AppContent() {
             <Route path="/refills" element={<Refills />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/pair-device" element={<PairDevice />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

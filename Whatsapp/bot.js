@@ -20,6 +20,8 @@ const patientState = createPatientState();
 let latestQrPayload = null;
 let qrUpdatedAt = null;
 let qrServerStarted = false;
+let connectionState = 'connecting';
+let lastConnectedAt = null;
 
 // Show only one QR per connection attempt to avoid terminal spam while
 // WhatsApp keeps rotating fresh QR payloads in the background.
@@ -44,12 +46,19 @@ function startQrHttpServer() {
     const requestUrl = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
 
     if (requestUrl.pathname === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*'
+      });
       res.end(
         JSON.stringify({
           ok: true,
+          connected: connectionState === 'open',
+          connectionState,
           qrAvailable: Boolean(latestQrPayload),
-          qrUpdatedAt
+          qrUpdatedAt,
+          lastConnectedAt
         })
       );
       return;
@@ -145,6 +154,10 @@ async function startBot() {
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
+    if (connection) {
+      connectionState = connection;
+    }
+
     if (qr && !hasDisplayedQRForCurrentAttempt) {
       hasDisplayedQRForCurrentAttempt = true;
       latestQrPayload = qr;
@@ -155,6 +168,7 @@ async function startBot() {
     if (connection === 'open') {
       hasDisplayedQRForCurrentAttempt = false;
       latestQrPayload = null;
+      lastConnectedAt = new Date().toISOString();
       console.log('[bot] WhatsApp bot is connected.');
       scheduler.start();
     }
