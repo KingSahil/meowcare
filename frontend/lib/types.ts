@@ -47,6 +47,14 @@ export interface ScanResult {
   title: string;
   summary: string;
   items: string[];
+  detectedMedicines: ScanResultMedicine[];
+}
+
+export interface ScanResultMedicine {
+  name: string;
+  dosage: string;
+  time: string;
+  stock?: number;
 }
 
 export interface ParsedAiInsight {

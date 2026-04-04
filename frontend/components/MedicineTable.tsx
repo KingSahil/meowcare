@@ -6,7 +6,8 @@ import type { Medicine } from '@/lib/types';
 
 interface MedicineTableProps {
   medicines: Medicine[];
-  onAdd: () => void;
+  onAdd?: () => void;
+  showAddButton?: boolean;
 }
 
 const statusClasses: Record<Medicine['status'], string> = {
@@ -15,7 +16,7 @@ const statusClasses: Record<Medicine['status'], string> = {
   pending: 'border-white/10 bg-[#242b29] text-white/65'
 };
 
-export function MedicineTable({ medicines, onAdd }: MedicineTableProps) {
+export function MedicineTable({ medicines, onAdd, showAddButton = true }: MedicineTableProps) {
   return (
     <section className="space-y-6" id="logs" aria-labelledby="medicine-table-title">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -25,10 +26,12 @@ export function MedicineTable({ medicines, onAdd }: MedicineTableProps) {
           </h2>
           <p className="text-body text-white/45">Current view: today&apos;s schedule, stock levels, and completion states.</p>
         </div>
-        <button type="button" className="button-primary inline-flex items-center justify-center gap-2" onClick={onAdd}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add medicine
-        </button>
+        {showAddButton ? (
+          <button type="button" className="button-primary inline-flex items-center justify-center gap-2" onClick={onAdd}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add medicine
+          </button>
+        ) : null}
       </div>
 
       <div className="space-y-3">

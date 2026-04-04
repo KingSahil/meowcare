@@ -3,6 +3,33 @@ import { loadDemoSnapshot, saveDemoSnapshot } from '@/lib/storage';
 import type { AlertItem, BurnoutPoint, Medicine, ParsedAiInsight, Patient, ScanResult } from '@/lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const CARE_USER_ID = '11111111-1111-1111-1111-111111111111';
+
+type ReminderRow = { id: string; medicine: string; dosage: string; time: string; quantity: number };
+
+const mapReminderRowsToMedicines = (rows: ReminderRow[], snapshot: Medicine[]): Medicine[] => {
+  const snapshotById = new Map(snapshot.map((medicine) => [medicine.id, medicine]));
+
+  const backendMapped = rows.map((row, index) => {
+    const localVersion = snapshotById.get(row.id);
+
+    return {
+      id: row.id,
+      name: row.medicine,
+      dosage: row.dosage,
+      time: row.time,
+      status:
+        localVersion?.status ??
+        ((index % 3 === 0 ? 'taken' : index % 3 === 1 ? 'pending' : 'missed') as Medicine['status']),
+      stock: row.quantity
+    } satisfies Medicine;
+  });
+
+  const backendIds = new Set(backendMapped.map((medicine) => medicine.id));
+  const snapshotOnly = snapshot.filter((medicine) => !backendIds.has(medicine.id));
+
+  return [...backendMapped, ...snapshotOnly];
+};
 
 const fileToDataUrl = async (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -40,22 +67,13 @@ export const fetchDashboardData = async (): Promise<{
   demoMode: boolean;
 }> => {
   try {
-    const reminders = await getJson<{ data: Array<{ id: string; medicine: string; dosage: string; time: string; quantity: number }> }>(
-      `${API_BASE}/api/reminder/list?userId=patient-ramesh-01`,
+    const reminders = await getJson<{ data: ReminderRow[] }>(
+      `${API_BASE}/api/reminder/list?userId=${CARE_USER_ID}`,
       { cache: 'no-store' }
     );
 
     const snapshot = loadDemoSnapshot();
-    const medicines = reminders.data.length
-      ? reminders.data.map((item, index) => ({
-          id: item.id,
-          name: item.medicine,
-          dosage: item.dosage,
-          time: item.time,
-          status: (index % 3 === 0 ? 'taken' : index % 3 === 1 ? 'pending' : 'missed') as Medicine['status'],
-          stock: item.quantity
-        }))
-      : snapshot.medicines;
+    const medicines = mapReminderRowsToMedicines(reminders.data ?? [], snapshot.medicines);
 
     return {
       patient: snapshot.patient,
@@ -82,7 +100,7 @@ export const createMedicine = async (medicine: Omit<Medicine, 'id' | 'status'>):
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: 'patient-ramesh-01',
+        userId: CARE_USER_ID,
         medicine: medicine.name,
         time: medicine.time,
         dosage: medicine.dosage,
@@ -113,7 +131,7 @@ export const submitSos = async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      userId: 'patient-ramesh-01',
+      userId: CARE_USER_ID,
       message: 'SOS triggered from caretaker dashboard'
     })
   });
@@ -133,7 +151,7 @@ export const syncMedicineStatus = async (status: 'taken' | 'later' | 'skip') => 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      userId: 'patient-ramesh-01',
+      userId: CARE_USER_ID,
       status,
       timestamp: new Date().toISOString()
     })
@@ -145,7 +163,7 @@ export const fetchBurnoutSuggestion = async (mood: string): Promise<{ suggestion
     const body = await getJson<{ data: { suggestion: string; burnoutLevel: string } }>(`${API_BASE}/api/burnout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: 'patient-ramesh-01', mood })
+      body: JSON.stringify({ userId: CARE_USER_ID, mood })
     });
 
     return {

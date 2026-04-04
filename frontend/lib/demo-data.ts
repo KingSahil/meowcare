@@ -1,7 +1,7 @@
 import type { AlertItem, BurnoutPoint, Caretaker, Medicine, Patient, ScanResult } from '@/lib/types';
 
 export const DEMO_PATIENT: Patient = {
-  id: 'patient-ramesh-01',
+  id: '11111111-1111-1111-1111-111111111111',
   name: 'Ramesh Kumar',
   age: 72,
   condition: 'Diabetes',
@@ -59,5 +59,10 @@ export const DEMO_SCAN_RESULT: ScanResult = {
     'Metformin 500 mg after breakfast',
     'Insulin Glargine 10 units nightly',
     'Aspirin 75 mg once daily, verify meal timing'
+  ],
+  detectedMedicines: [
+    { name: 'Metformin', dosage: '500 mg', time: '08:00 AM', stock: 10 },
+    { name: 'Insulin Glargine', dosage: '10 units', time: '09:00 PM', stock: 10 },
+    { name: 'Aspirin', dosage: '75 mg', time: '01:00 PM', stock: 10 }
   ]
 };

@@ -75,6 +75,38 @@ PORT=4000
 SOCKET_PORT=4001
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-supabase-anon-key
+PUBLIC_BASE_URL=https://your-public-backend-url
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_FROM_NUMBER=+1234567890
+DEEPGRAM_API_KEY=your-deepgram-api-key
+```
+
+`PUBLIC_BASE_URL` must be reachable by Twilio webhooks (use ngrok or a deployed URL in development).
+
+## Medicine Confirmation Calls (Twilio + Deepgram)
+
+Deepgram does transcription and intent extraction here, while Twilio places PSTN calls.
+
+1. `POST /api/call-reminder/schedule` to schedule a future call.
+2. At reminder time, backend triggers Twilio outbound call.
+3. Twilio hits `/api/call-reminder/twilio/voice/:jobId` for TwiML.
+4. Patient records spoken answer after beep.
+5. Twilio posts recording URL to `/api/call-reminder/twilio/recording/:jobId`.
+6. Backend transcribes via Deepgram and maps to `taken`, `later`, or `skip`.
+7. Backend writes medicine status through existing status/log flow.
+
+### `POST /api/call-reminder/trigger-now`
+
+Request:
+
+```json
+{
+  "userId": "7e26d07f-b987-4c2b-98e2-4fb393f68df9",
+  "phone": "+919999999999",
+  "medicine": "Metformin",
+  "dosage": "500mg"
+}
 ```
 
 ## Supabase Schema

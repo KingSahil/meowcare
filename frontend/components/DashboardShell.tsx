@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { PropsWithChildren, useEffect, useState } from 'react';
-import { Bell, Boxes, FileText, LayoutDashboard, Plus, Search, TriangleAlert, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Search, TriangleAlert, UserCircle2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { SidebarNav } from '@/components/SidebarNav';
@@ -14,10 +14,7 @@ import { useCareStore } from '@/store/useCareStore';
 
 const pageMeta: Record<string, { eyebrow: string; title: string }> = {
   '/dashboard': { eyebrow: 'Dashboard', title: 'Connected patient overview' },
-  '/dashboard/logs': { eyebrow: 'Logs', title: 'Medication timeline and AI notes' },
-  '/dashboard/refills': { eyebrow: 'Refills', title: 'Prescription scans and stock management' },
-  '/dashboard/stock': { eyebrow: 'Stock', title: 'Full inventory and refill readiness' },
-  '/dashboard/alerts': { eyebrow: 'Alerts', title: 'Active incidents and emergency monitoring' },
+  '/dashboard/add-medicine': { eyebrow: 'Add Medicine', title: 'Add medicines with OCR or manual entry' },
   '/dashboard/settings': { eyebrow: 'Settings', title: 'Operational preferences and environment' }
 };
 
@@ -99,9 +96,6 @@ export function DashboardShell({ children }: PropsWithChildren) {
                 <Search className="h-4 w-4 text-white/45" aria-hidden="true" />
                 <input className="bg-transparent text-xs text-ink outline-none placeholder:text-white/30" placeholder="Quick find patient..." />
               </label>
-              <Link href="/dashboard/alerts" className="rounded-full p-2 text-white/60 transition hover:text-[#68dbae]" aria-label="Notifications">
-                <Bell className="h-5 w-5" />
-              </Link>
               <Link href="/dashboard/settings" className="rounded-full p-2 text-white/60 transition hover:text-[#68dbae]" aria-label="Profile">
                 <UserCircle2 className="h-5 w-5" />
               </Link>
@@ -159,28 +153,18 @@ export function DashboardShell({ children }: PropsWithChildren) {
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-20 items-center justify-around bg-[#161d1b]/80 px-4 backdrop-blur-xl md:hidden">
         <Link href="/dashboard" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
           <LayoutDashboard className="h-5 w-5" />
-          <span className="text-[10px] uppercase tracking-tight">Home</span>
+          <span className="text-[10px] uppercase tracking-tight">Dashboard</span>
         </Link>
-        <Link href="/dashboard/logs" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/logs' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
-          <FileText className="h-5 w-5" />
-          <span className="text-[10px] uppercase tracking-tight">Logs</span>
-        </Link>
-        <div className="relative -top-6">
-          <Link href="/dashboard/logs" className="button-primary flex h-14 w-14 items-center justify-center rounded-full p-0">
-            <Plus className="h-6 w-6" />
-          </Link>
-        </div>
-        <Link href="/dashboard/alerts" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/alerts' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
-          <TriangleAlert className="h-5 w-5" />
-          <span className="text-[10px] uppercase tracking-tight">Alerts</span>
-        </Link>
-        <Link href="/dashboard/stock" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/stock' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
-          <Boxes className="h-5 w-5" />
-          <span className="text-[10px] uppercase tracking-tight">Stock</span>
+        <Link
+          href="/dashboard/add-medicine"
+          className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/add-medicine' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}
+        >
+          <PlusCircle className="h-5 w-5" />
+          <span className="text-[10px] uppercase tracking-tight">Add</span>
         </Link>
         <Link href="/dashboard/settings" className={`flex flex-col items-center gap-1 ${pathname === '/dashboard/settings' ? 'font-bold text-[#68dbae]' : 'text-white/60'}`}>
           <UserCircle2 className="h-5 w-5" />
-          <span className="text-[10px] uppercase tracking-tight">Profile</span>
+          <span className="text-[10px] uppercase tracking-tight">Settings</span>
         </Link>
       </nav>
 

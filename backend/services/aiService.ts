@@ -10,6 +10,12 @@ export interface ScanResult {
   title: string;
   summary: string;
   items: string[];
+  detectedMedicines: Array<{
+    name: string;
+    dosage: string;
+    time: string;
+    stock?: number;
+  }>;
 }
 
 type AiModuleOptions = {
@@ -66,6 +72,12 @@ const buildMedicationLine = (medication: any) => {
   return parts.join(' | ');
 };
 
+const pickMedicationTime = (medication: any) => {
+  const schedule = Array.isArray(medication?.schedule) ? medication.schedule : [];
+  const firstTime = schedule.map((entry: any) => toText(entry?.time)).find(Boolean);
+  return firstTime || toText(medication?.timing) || '08:00 AM';
+};
+
 export const parseReminderText = async (text: string, userContext: Record<string, unknown> = {}) => {
   const normalizedText = toText(text);
 
@@ -120,7 +132,8 @@ export const buildPrescriptionScanResult = (parsed: any): ScanResult => {
     return {
       title: 'Prescription scan summary',
       summary: errorText || 'No medicines could be reliably detected from this image.',
-      items: clarifications.length ? clarifications : ['Try a clearer image with better lighting.']
+      items: clarifications.length ? clarifications : ['Try a clearer image with better lighting.'],
+      detectedMedicines: []
     };
   }
 
@@ -129,6 +142,12 @@ export const buildPrescriptionScanResult = (parsed: any): ScanResult => {
     summary: `Detected ${medications.length} medicine${medications.length === 1 ? '' : 's'}${
       clarifications.length ? ` with ${clarifications.length} clarification${clarifications.length === 1 ? '' : 's'} needed` : ''
     }.`,
-    items: medications.slice(0, 6).map(buildMedicationLine).filter(Boolean)
+    items: medications.slice(0, 6).map(buildMedicationLine).filter(Boolean),
+    detectedMedicines: medications.slice(0, 20).map((medication: any) => ({
+      name: toText(medication?.name) || 'Unknown medicine',
+      dosage: toText(medication?.dosage) || '1 dose',
+      time: pickMedicationTime(medication),
+      stock: Number.isFinite(Number(medication?.quantity)) ? Number(medication.quantity) : 10
+    }))
   };
 };

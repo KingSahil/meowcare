@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,14 +14,22 @@ const medicineSchema = z.object({
 
 type MedicineFormValues = z.infer<typeof medicineSchema>;
 
+const EMPTY_VALUES: MedicineFormValues = {
+  name: '',
+  dosage: '',
+  time: '',
+  stock: 10
+};
+
 interface AddMedicineFormProps {
   open: boolean;
   submitting: boolean;
   onClose: () => void;
   onSubmit: (values: MedicineFormValues) => Promise<void>;
+  initialValues?: Partial<MedicineFormValues>;
 }
 
-export function AddMedicineForm({ open, submitting, onClose, onSubmit }: AddMedicineFormProps) {
+export function AddMedicineForm({ open, submitting, onClose, onSubmit, initialValues }: AddMedicineFormProps) {
   const {
     register,
     handleSubmit,
@@ -28,13 +37,19 @@ export function AddMedicineForm({ open, submitting, onClose, onSubmit }: AddMedi
     reset
   } = useForm<MedicineFormValues>({
     resolver: zodResolver(medicineSchema),
-    defaultValues: {
-      name: '',
-      dosage: '',
-      time: '',
-      stock: 10
-    }
+    defaultValues: EMPTY_VALUES
   });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    reset({
+      ...EMPTY_VALUES,
+      ...initialValues
+    });
+  }, [open, initialValues, reset]);
 
   if (!open) {
     return null;

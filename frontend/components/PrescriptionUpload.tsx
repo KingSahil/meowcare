@@ -107,9 +107,12 @@ export function PrescriptionUpload({ result, onScanned }: PrescriptionUploadProp
           }
 
           setLoading(true);
-          const scan = await scanPrescription(selectedFile);
-          onScanned(scan);
-          setLoading(false);
+          try {
+            const scan = await scanPrescription(selectedFile);
+            onScanned(scan);
+          } finally {
+            setLoading(false);
+          }
         }}
       >
         <ScanSearch className="h-4 w-4" aria-hidden="true" />

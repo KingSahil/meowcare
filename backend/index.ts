@@ -3,6 +3,7 @@ import { openapi } from '@elysiajs/openapi';
 import { Elysia } from 'elysia';
 import { aiRoutes } from './routes/ai';
 import { burnoutRoutes } from './routes/burnout';
+import { callReminderRoutes } from './routes/callReminder';
 import { reminderRoutes } from './routes/reminder';
 import { sosRoutes } from './routes/sos';
 import { statusRoutes } from './routes/status';
@@ -38,7 +39,11 @@ const app = new Elysia()
           { name: 'Reminders', description: 'Reminder creation and listing' },
           { name: 'Status', description: 'Medicine dose status updates' },
           { name: 'Alerts', description: 'SOS and alert-triggering endpoints' },
-          { name: 'Wellbeing', description: 'Burnout assessment endpoint' }
+          { name: 'Wellbeing', description: 'Burnout assessment endpoint' },
+          {
+            name: 'Calls',
+            description: 'Outbound medicine confirmation calls via Twilio and Deepgram'
+          }
         ]
       }
     })
@@ -64,6 +69,7 @@ const app = new Elysia()
     }
   )
   .use(aiRoutes)
+  .use(callReminderRoutes)
   .use(reminderRoutes)
   .use(statusRoutes)
   .use(sosRoutes)
