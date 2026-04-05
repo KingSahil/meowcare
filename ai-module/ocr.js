@@ -1202,6 +1202,147 @@ function mapRelationForOutput(templateOrReminder) {
   return 'none';
 }
 
+function cleanMedicineName(rawLine) {
+  return normalizeText(rawLine)
+    .replace(/^\s*(?:\d+\s*[.)-]?\s*)?/, '')
+    .replace(/^\s*(?:[-*•]\s*)?/, '')
+    .replace(/^\s*(?:tab(?:let)?|cap(?:sule)?|syp|syrup|inj|injection|ointment|cream|drops?|paste)\.?\s+/i, '')
+    .replace(/[\s.:;,-]+$/, '');
+}
+
+function isSectionHeading(line) {
+  const value = normalizeText(line).toLowerCase();
+
+  if (!value) {
+    return false;
+  }
+
+  return /^(?:rx|complaints?|vitals?|examination|diagnosis|investigations?|advice|referrals?|patient details|medical history|name|instructions|frequency|medicines?)\b/.test(
+    value
+  );
+}
+
+function isLikelyMedicineHeader(line) {
+  const value = normalizeText(line);
+  const lowered = value.toLowerCase();
+
+  if (!value || value.length < 3 || isSectionHeading(value)) {
+    return false;
+  }
+
+  if (/^\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?$/.test(value)) {
+    return false;
+  }
+
+  if (/^(?:morning|afternoon|evening|night)(?:\s*-\s*(?:morning|afternoon|evening|night))+$/i.test(value)) {
+    return false;
+  }
+
+  if (/^\d+(?:\.\d+)?\s*(?:tablet|tablets|tab|capsule|capsules|cap|caps|ml|mg|mcg|drops?|puffs?)\b/i.test(value)) {
+    return false;
+  }
+
+  if (/^(?:instructions?\s*:\s*)/i.test(value)) {
+    return false;
+  }
+
+  if (/\b(?:for\s+\d+\s*(?:day|days|week|weeks|month|months)|when\s+required|if\s+required|as\s+needed)\b/i.test(value) && !/\b(?:tab(?:let)?|cap(?:sule)?|syrup|drops?|paste|chewable)\b/i.test(value)) {
+    return false;
+  }
+
+  if (/\b(?:tab(?:let)?|cap(?:sule)?|syrup|drops?|paste|chewable|mg|mcg|ml)\b/i.test(value)) {
+    return true;
+  }
+
+  if (/^(?:\d+\s*[.)-]?\s*)?[a-z][a-z0-9+().\/-]*(?:\s+[a-z][a-z0-9+().\/-]*){0,5}\s*$/i.test(value)) {
+    return /[a-z]/i.test(cleanMedicineName(value)) && !/\b(?:view|sample|report|reports?)\b/.test(lowered);
+  }
+
+  return false;
+}
+
+function extractInlineTiming(text) {
+  const source = normalizeText(text);
+  const match = source.match(
+    /\b(after\s+(?:breakfast|lunch|dinner|meal|meals)|before\s+(?:breakfast|lunch|dinner|meal|meals)|with\s+(?:breakfast|lunch|dinner|meal|meals)|empty\s+stomach|on\s+empty\s+stomach|morning|afternoon|evening|night|bedtime|if\s+required|as\s+needed)\b/i
+  );
+
+  return normalizeText(match?.[0] || '');
+}
+
+function extractInlineFrequency(text) {
+  const source = normalizeText(text);
+  const match = source.match(
+    /\b(once\s+daily|twice\s+daily|thrice\s+daily|three\s+times\s+daily|four\s+times\s+daily|daily|every\s+\d+\s*hours|if\s+required|as\s+needed)\b/i
+  );
+
+  return normalizeText(match?.[0] || '');
+}
+
+function buildFallbackPrescriptionItems(ocrText) {
+  const lines = String(ocrText || '')
+    .split(/\r?\n/)
+    .map((line) => normalizeText(line))
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return [];
+  }
+
+  const items = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (!isLikelyMedicineHeader(line)) {
+      continue;
+    }
+
+    const medicine = cleanMedicineName(line);
+
+    if (!medicine || medicine.length < 2) {
+      continue;
+    }
+
+    const blockLines = [line];
+
+    for (let cursor = index + 1; cursor < lines.length && cursor <= index + 5; cursor += 1) {
+      const nextLine = lines[cursor];
+
+      if (isSectionHeading(nextLine) || isLikelyMedicineHeader(nextLine)) {
+        break;
+      }
+
+      blockLines.push(nextLine);
+      index = cursor;
+    }
+
+    const blockText = blockLines.join(' ');
+    const dosageMatch = blockText.match(
+      /\b\d+(?:\.\d+)?\s*(?:tablet|tablets|tab|capsule|capsules|cap|caps|ml|mg|mcg|drops?|puffs?)\b/i
+    );
+    const durationMatch = blockText.match(/\b(?:for\s*)?\d+\s*(?:day|days|week|weeks|month|months)\b/i);
+    const scheduleMatch = blockText.match(
+      /\b\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?\b/
+    );
+    const instructionLine = blockLines.find((entry) => /\b(?:instruction|take|after|before|with|empty stomach|required|needed)\b/i.test(entry));
+
+    items.push({
+      medicine,
+      dosage: normalizeText(dosageMatch?.[0] || ''),
+      frequency: extractInlineFrequency(blockText),
+      timing: extractInlineTiming(blockText),
+      duration_text: normalizeText(durationMatch?.[0] || ''),
+      schedule_pattern: normalizeText(scheduleMatch?.[0] || ''),
+      condition: '',
+      instructions: normalizeText(instructionLine || ''),
+      source_text: blockText
+    });
+  }
+
+  return items;
+}
+
 function buildSimpleOutput(medicines, reminders, questions) {
   const grouped = new Map();
   const questionList = Array.isArray(questions) ? questions : [];
@@ -1574,9 +1715,15 @@ async function parsePrescriptionText(ocrText, options = {}) {
       options
     );
 
-    return normalizePrescriptionItems(result?.items, text);
+    const normalized = normalizePrescriptionItems(result?.items, text);
+
+    if (normalized.length) {
+      return normalized;
+    }
+
+    return normalizePrescriptionItems(buildFallbackPrescriptionItems(text), text);
   } catch {
-    return normalizePrescriptionItems([], text);
+    return normalizePrescriptionItems(buildFallbackPrescriptionItems(text), text);
   }
 }
 

@@ -3,6 +3,11 @@
 		"supabase": {
 			"type": "http",
 			"url": "https://mcp.supabase.com/mcp?project_ref=ltntbaritgbaebkccryt"
+		},
+		"Railway": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@railway/mcp-server"]
 		}
 	},
 	"inputs": []
