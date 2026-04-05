@@ -87,6 +87,9 @@ TWILIO_ACCOUNT_SID=your-twilio-account-sid
 TWILIO_AUTH_TOKEN=your-twilio-auth-token
 TWILIO_FROM_NUMBER=+1234567890
 DEEPGRAM_API_KEY=your-deepgram-api-key
+GROQ_API_KEY=your-groq-api-key
+GROQ_TEXT_MODEL=llama-3.3-70b-versatile
+GROQ_VISION_MODEL=meta-llama/llama-4-maverick-17b-128e-instruct
 ```
 
 `PUBLIC_BASE_URL` must be reachable by Twilio webhooks (use ngrok or a deployed URL in development).
@@ -111,6 +114,9 @@ Set these environment variables in Render:
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_FROM_NUMBER`
 - `DEEPGRAM_API_KEY`
+- `GROQ_API_KEY`
+- `GROQ_TEXT_MODEL` (optional)
+- `GROQ_VISION_MODEL` (optional)
 
 After Render gives you the backend URL, set `PUBLIC_BASE_URL` to that same public Render URL so Twilio callback routes resolve correctly.
 

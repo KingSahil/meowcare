@@ -25,6 +25,12 @@ services:
         sync: false
       - key: DEEPGRAM_API_KEY
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_TEXT_MODEL
+        sync: false
+      - key: GROQ_VISION_MODEL
+        sync: false
   - type: web
     name: meowcare-whatsapp-bot
     runtime: node
