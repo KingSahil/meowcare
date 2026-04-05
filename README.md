@@ -5,7 +5,7 @@ MeowCare is a remote care companion for medication reminders, caregiver monitori
 It combines:
 
 - a Vite + React frontend for caregivers
-- a Bun + TypeScript backend for reminders, status logs, SOS alerts, AI parsing, and voice flows
+- a Bun.js + TypeScript backend for reminders, status logs, SOS alerts, AI parsing, and voice flows
 - a WhatsApp bot for patient reminders and passive safety follow-up
 - a standalone AI parsing module for free-text reminders and prescription-image extraction
 
